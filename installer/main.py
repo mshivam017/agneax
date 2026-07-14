@@ -23,6 +23,39 @@ class InstallerBridge(QObject):
 
     @Slot(result=str)
     def getDrives(self):
+        # On Linux, perform real discovery using lsblk JSON output (Step 4 of analysis)
+        if sys.platform != "win32":
+            try:
+                res = subprocess.run(
+                    ["lsblk", "--json", "-d", "-o", "NAME,MODEL,SIZE,TRAN"],
+                    capture_output=True,
+                    text=True
+                )
+                if res.returncode == 0:
+                    data = json.loads(res.stdout)
+                    drives = []
+                    for dev in data.get("blockdevices", []):
+                        name = dev.get("name", "")
+                        # Filter out optical discs and loop devices
+                        if name.startswith("sr") or name.startswith("loop"):
+                            continue
+                        
+                        model = dev.get("model") or "Generic Drive"
+                        size = dev.get("size") or "Unknown Size"
+                        tran = dev.get("tran") or "unknown"
+                        
+                        drives.append({
+                            "path": f"/dev/{name}",
+                            "model": f"{model} ({size})",
+                            "size": size,
+                            "type": "SSD" if "ssd" in model.lower() or "nvme" in name else ("HDD" if "hdd" in model.lower() else tran.upper())
+                        })
+                    if drives:
+                        return json.dumps(drives)
+            except Exception as e:
+                print(f"Error executing lsblk: {e}")
+        
+        # Fallback to simulated drives list for developer/Windows previews
         return json.dumps(self._drives)
 
     @Slot(str, str, str, str)

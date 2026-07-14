@@ -55,6 +55,15 @@ jobs:
           cd packages/agneax-core
           cargo build --release
 
+      - name: Run Rust Daemon Unit Tests
+        run: |
+          cd packages/agneax-core
+          cargo test
+
+      - name: Run Python Application Unit Tests
+        run: |
+          python tests/test_agneax.py
+
       - name: Compile C++ Window Helper
         run: |
           mkdir -p desktop/cpp_src/build

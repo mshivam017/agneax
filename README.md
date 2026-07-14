@@ -4,7 +4,7 @@
 
 **Fast. Beautiful. Secure. Simple. Powerful.**
 
-**Agneax OS** is a production-ready, open-source Linux operating system based on Debian Stable / Ubuntu LTS. It is designed to combine the simplicity of Windows, the elegance of macOS, and the developer-focused flexibility of Linux.
+**Agneax OS** is an open-source Linux operating system (currently in Alpha / Active Prototype stage) based on Debian Stable / Ubuntu LTS. It is designed to combine the simplicity of Windows, the elegance of macOS, and the developer-focused flexibility of Linux.
 
 ---
 

@@ -63,9 +63,16 @@ class SettingsBridge(QObject):
         self._firewall["enabled"] = enabled
         # Try to contact Rust daemon to make live UFW modification
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1.0)
+            # Check for UNIX domain socket on Linux (Step 6)
+            if sys.platform != "win32" and os.path.exists("/run/agneax-core.sock"):
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                s.connect("/run/agneax-core.sock")
+            else:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.connect(("127.0.0.1", 9090))
+
+            with s:
+                s.settimeout(1.0)
                 req = json.dumps({"method": "toggle_firewall", "params": {"enable": enabled}})
                 s.sendall(req.encode('utf-8'))
                 res = s.recv(1024)

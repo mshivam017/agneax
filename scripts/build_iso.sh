@@ -232,8 +232,13 @@ cp -R control-center/* "$ROOTFS/opt/agneax/control-center/" || true
 cp -R installer/* "$ROOTFS/opt/agneax/installer/" || true
 cp -R branding/* "$ROOTFS/opt/agneax/branding/" || true
 
+# Package the Agneax Store from local source dynamically (Step 5 of analysis)
+echo "Packaging Agneax Store dynamically from current workspace sources..."
+chmod +x ./scripts/package_store.sh
+./scripts/package_store.sh
+
 # Install Agneax Store Debian Package (Step 7)
-cp "packages/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
+cp "build/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
 chroot "$ROOTFS" dpkg -i /tmp/agneax-store_1.0.0_amd64.deb || true
 rm -f "$ROOTFS/tmp/agneax-store_1.0.0_amd64.deb"
 
