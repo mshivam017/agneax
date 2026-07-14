@@ -66,6 +66,7 @@ jobs:
         run: |
           chmod +x scripts/build_iso.sh
           sudo ./scripts/build_iso.sh
+          sudo chown -R $USER:$USER build
 
       - name: Generate SHA256 Checksum
         run: |
