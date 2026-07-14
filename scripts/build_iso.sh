@@ -81,14 +81,17 @@ apt-get install -y --no-install-recommends \
   lightdm \
   python3 \
   python3-pip \
-  python3-pyside6 \
-  python3-pyqt6 \
   libgl1-mesa-dri \
+  libxkbcommon-x11-0 \
+  libxcb-cursor0 \
   pipewire \
   pipewire-audio-client-libraries \
   sudo \
   git \
   curl
+
+# Install PySide6 via pip inside the chroot
+pip3 install --break-system-packages PySide6
 
 # Configure user
 echo "agneax-os" > /etc/hostname
