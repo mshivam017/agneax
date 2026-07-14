@@ -92,6 +92,7 @@ apt-get install -y --no-install-recommends \
   firmware-realtek \
   firmware-atheros \
   xserver-xorg-video-all \
+  xserver-xorg-input-all \
   va-driver-all \
   vdpau-driver-all
 
@@ -147,9 +148,10 @@ echo "127.0.0.1 localhost" > /etc/hosts
 echo "127.0.1.1 agneax-os" >> /etc/hosts
 
 # Create live user
+groupadd -r autologin || true
 useradd -m -s /bin/bash agneax
 echo "agneax:agneax" | chpasswd
-usermod -aG sudo,video,audio,cdrom agneax
+usermod -aG sudo,video,audio,cdrom,autologin agneax
 echo "agneax ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Enable system services
