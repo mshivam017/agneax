@@ -1,0 +1,418 @@
+AGNEAX OS VIRTUALBOX BLANK SCREEN / CURSOR ANALYSIS PROMPT
+Date: 2026-07-14
+Repository: D:\myprojects\Github
+Issue: ISO boots in VirtualBox but shows only a blank screen with cursor.
+
+SHORT SUMMARY
+
+The ISO is most likely booting far enough to reach graphics/session startup, but the desktop shell is not appearing.
+The blank screen with cursor usually means one of these failed:
+- LightDM display manager
+- Wayland session selection
+- Weston compositor startup
+- PySide6 / Qt Wayland desktop shell startup
+- VirtualBox graphics driver / DRM backend compatibility
+
+In Agneax OS, the boot path is:
+
+GRUB -> Linux live boot -> systemd -> LightDM -> agneax-wayland session -> /usr/bin/agneax-session-start -> weston --backend=drm -> /opt/agneax/desktop/run.sh -> python3 /opt/agneax/desktop/main.py -> QML DesktopShell.qml
+
+If any step after Weston fails, VirtualBox can show only a black screen and cursor.
+
+FILES CHECKED
+
+- scripts/build_iso.sh
+- configs/boot/grub/grub.cfg
+- configs/etc/lightdm/lightdm.conf
+- configs/usr/share/wayland-sessions/agneax-wayland.desktop
+- configs/usr/bin/agneax-session-start
+- desktop/main.py
+- desktop/qml/DesktopShell.qml
+
+LOCAL VERIFICATION NOTE
+
+Command run:
+
+python tests/test_agneax.py
+
+Result:
+- 9 tests ran.
+- 1 test failed: test_desktop_shortcut_creation_removal.
+- Failure reason: permission denied while trying to create C:\Users\Shivam/Desktop/firefox.desktop.
+- This test failure is not the direct cause of the VirtualBox blank screen, but it shows that Store shortcut creation is not robust across host environments.
+- Store tests should use a temporary desktop directory or mock os.path.expanduser instead of writing to the real user Desktop.
+
+IMPORTANT FINDINGS
+
+1. Actual ISO GRUB config is generated inside scripts/build_iso.sh
+
+The file configs/boot/grub/grub.cfg exists, but the final ISO boot menu is generated near the end of scripts/build_iso.sh.
+So if you change only configs/boot/grub/grub.cfg, the ISO boot options may not change.
+
+Current generated boot args in scripts/build_iso.sh:
+- boot=live quiet splash ---
+- boot=live nomodeset quiet splash ---
+
+Problem:
+- quiet splash hides useful boot errors.
+- When graphics/session fails, it looks like a blank screen instead of showing the real error.
+
+Recommended debug change:
+- Remove quiet splash.
+- Add systemd.unit=multi-user.target for one debug boot entry.
+- Add loglevel=7.
+
+2. Weston uses DRM backend
+
+Current session start:
+
+weston --backend=drm \
+       --shell=kiosk-shell.so \
+       --continue-without-input \
+       --startup-cmd="/opt/agneax/desktop/run.sh"
+
+Problem:
+- VirtualBox graphics can fail or behave badly with Weston DRM depending on graphics controller and guest modules.
+- If Weston starts but the PySide6 app fails, a blank Weston surface with cursor is possible.
+
+VirtualBox settings to try:
+- Graphics Controller: VMSVGA
+- Video Memory: 128 MB
+- Try 3D Acceleration ON first.
+- If still blank, try 3D Acceleration OFF.
+- Boot Safe Graphics Mode.
+- Disable EFI first unless the ISO specifically needs EFI.
+
+3. LightDM config may be fragile for a Wayland session
+
+configs/etc/lightdm/lightdm.conf contains:
+
+user-session=agneax-wayland
+autologin-user=agneax
+session-wrapper=/etc/X11/Xsession
+
+Problem:
+- session-wrapper=/etc/X11/Xsession is X11-oriented and may interfere with a pure Wayland/Weston session.
+- LightDM with --no-install-recommends may not install a greeter package.
+- If LightDM starts but cannot launch the selected session cleanly, the result can be a cursor on a blank screen.
+
+Recommended:
+- Remove session-wrapper for the Wayland session.
+- Install a known greeter or avoid LightDM for the first alpha ISO.
+- For debugging, launch Weston directly from a TTY/systemd service instead of LightDM.
+
+4. PySide6 desktop may be crashing after Weston starts
+
+Desktop startup script generated in scripts/build_iso.sh:
+
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+cd /opt/agneax/desktop
+python3 main.py
+
+Possible issues:
+- PySide6 installed by pip may miss runtime libraries needed inside minimal Debian rootfs.
+- Qt Wayland plugin/runtime dependencies may be incomplete.
+- DesktopShell.qml references ../branding/wallpaper.svg, but branding is copied to /opt/agneax/branding.
+  From /opt/agneax/desktop/qml, ../branding points to /opt/agneax/desktop/branding, which likely does not exist.
+  Missing wallpaper alone should not fully blank the desktop, but it is still a packaging path bug.
+- Broken UTF-8 symbols in QML may not be fatal, but they should be cleaned.
+
+Recommended:
+- Capture /opt/agneax/desktop/run.sh output to a log file.
+- Run python3 /opt/agneax/desktop/main.py manually from TTY.
+- Check whether PySide6 imports successfully inside the live ISO.
+
+5. agneax-core service exists in build script but may not be the blank screen cause
+
+scripts/build_iso.sh creates:
+- /etc/systemd/system/agneax-core.service
+- systemctl enable agneax-core
+
+This daemon is useful for telemetry, but the desktop should still show with simulated telemetry if daemon is unavailable.
+So daemon failure is probably not the primary cause of a blank cursor screen.
+
+MOST LIKELY ROOT CAUSES
+
+Priority 1:
+- PySide6/Qt desktop shell crashes after Weston starts.
+
+Priority 2:
+- Weston DRM backend is not working correctly with VirtualBox graphics.
+
+Priority 3:
+- LightDM autologin/session wrapper does not launch the Wayland session correctly.
+
+Priority 4:
+- Missing runtime packages in minimal Debian rootfs.
+
+Priority 5:
+- GRUB quiet/splash hides the actual boot or session error.
+
+FIRST DEBUG STEPS IN VIRTUALBOX
+
+1. Try Safe Graphics Mode
+- At GRUB menu, choose Agneax OS Safe Graphics Mode.
+- If it still shows blank screen, continue below.
+
+2. Switch to TTY
+- Press Host key + F2, or Ctrl + Alt + F2 depending on VirtualBox keyboard capture.
+- Login:
+  username: agneax
+  password: agneax
+
+3. Check services
+
+Run:
+
+systemctl status lightdm --no-pager
+systemctl status agneax-core --no-pager
+journalctl -b -p err --no-pager
+journalctl -b -u lightdm --no-pager
+
+4. Check session files
+
+Run:
+
+ls -l /usr/bin/agneax-session-start
+cat /usr/bin/agneax-session-start
+ls -l /opt/agneax/desktop/run.sh
+cat /opt/agneax/desktop/run.sh
+ls -l /opt/agneax/desktop/main.py
+ls -l /opt/agneax/desktop/qml/DesktopShell.qml
+
+5. Test PySide6
+
+Run:
+
+python3 -c "import PySide6; print(PySide6.__version__)"
+python3 -c "from PySide6.QtWidgets import QApplication; print('Qt widgets ok')"
+python3 -c "from PySide6.QtQml import QQmlApplicationEngine; print('QML ok')"
+
+6. Manually run desktop shell
+
+Run:
+
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+cd /opt/agneax/desktop
+python3 main.py
+
+If this prints an error, that error is the real cause.
+
+7. Check Weston manually
+
+Run:
+
+weston --backend=drm --continue-without-input
+
+If Weston itself fails, the issue is graphics/backend/VirtualBox.
+
+QUICK FIX PLAN
+
+1. Add a debug GRUB entry in scripts/build_iso.sh
+
+Add a menuentry like:
+
+menuentry "Agneax OS Debug Console" {
+    search --set=root --file /live/vmlinuz
+    linux /live/vmlinuz boot=live systemd.unit=multi-user.target loglevel=7 ---
+    initrd /live/initrd
+}
+
+This boots to console so errors can be checked.
+
+2. Remove quiet splash from debug builds
+
+Change:
+
+linux /live/vmlinuz boot=live quiet splash ---
+
+To:
+
+linux /live/vmlinuz boot=live loglevel=7 ---
+
+3. Log desktop startup
+
+Change /opt/agneax/desktop/run.sh generation in scripts/build_iso.sh to:
+
+#!/usr/bin/env bash
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+cd /opt/agneax/desktop
+python3 main.py >> /tmp/agneax-desktop.log 2>&1
+
+Then in TTY:
+
+cat /tmp/agneax-desktop.log
+
+4. Log session startup
+
+Change /usr/bin/agneax-session-start generation to:
+
+#!/usr/bin/env bash
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+weston --backend=drm \
+       --shell=kiosk-shell.so \
+       --continue-without-input \
+       --log=/tmp/weston.log \
+       --startup-cmd="/opt/agneax/desktop/run.sh"
+
+Then in TTY:
+
+cat /tmp/weston.log
+
+5. Fix LightDM config
+
+Remove this line unless it is proven necessary:
+
+session-wrapper=/etc/X11/Xsession
+
+Keep:
+
+[Seat:*]
+autologin-user=agneax
+autologin-user-timeout=0
+user-session=agneax-wayland
+
+6. Install missing likely runtime packages
+
+In scripts/build_iso.sh, consider adding:
+
+qtwayland5
+libegl1
+libgl1
+libgles2
+mesa-utils
+dbus-x11
+xdg-utils
+libxcb-cursor0
+libxcb-keysyms1
+libxcb-randr0
+libxcb-xinerama0
+libxcb-icccm4
+libxcb-image0
+libxcb-render-util0
+libxkbcommon0
+libxkbcommon-x11-0
+
+For Qt6/PySide6, also verify whether Debian packages or pip wheels provide the Wayland platform plugin correctly.
+
+7. Fix wallpaper path
+
+Current QML:
+
+source: "../branding/wallpaper.svg"
+
+Possible correct path from /opt/agneax/desktop/qml:
+
+source: "file:///opt/agneax/branding/wallpaper.svg"
+
+Or copy branding into:
+
+/opt/agneax/desktop/branding
+
+8. Add a fallback desktop mode
+
+For VirtualBox/debug builds, allow:
+
+QT_QPA_PLATFORM=xcb
+
+and use X11/Weston fallback if Wayland fails.
+
+DETAILED PROMPT FOR AI/CODEX TO FIX THIS ISSUE
+
+Use this prompt:
+
+"Analyze the Agneax OS repository because the generated ISO boots in VirtualBox but shows only a blank screen with a cursor.
+
+Focus on the full boot/session path:
+GRUB -> live boot -> systemd -> LightDM -> agneax-wayland session -> /usr/bin/agneax-session-start -> Weston DRM backend -> /opt/agneax/desktop/run.sh -> PySide6 desktop/main.py -> QML DesktopShell.qml.
+
+Inspect and improve these files:
+- scripts/build_iso.sh
+- configs/boot/grub/grub.cfg
+- configs/etc/lightdm/lightdm.conf
+- configs/usr/share/wayland-sessions/agneax-wayland.desktop
+- configs/usr/bin/agneax-session-start
+- desktop/main.py
+- desktop/qml/DesktopShell.qml
+- docs/build.md
+
+Current symptoms:
+- In VirtualBox, the ISO reaches a blank screen with cursor only.
+- No desktop panel, dock, start menu, or wallpaper appears.
+- Safe Graphics Mode may also show blank screen.
+
+Known repository details:
+- scripts/build_iso.sh generates the real ISO GRUB config, so configs/boot/grub/grub.cfg is not enough.
+- The generated GRUB entries use quiet splash, hiding errors.
+- Session startup uses weston --backend=drm --shell=kiosk-shell.so --startup-cmd=/opt/agneax/desktop/run.sh.
+- run.sh sets QT_QPA_PLATFORM=wayland and runs python3 main.py.
+- LightDM config includes session-wrapper=/etc/X11/Xsession, which may interfere with Wayland session startup.
+- DesktopShell.qml references ../branding/wallpaper.svg, but branding is copied to /opt/agneax/branding, so the path is likely wrong.
+
+Please do the following:
+1. Add a debug GRUB menu entry that boots to multi-user.target with loglevel=7.
+2. Remove quiet splash from debug ISO boot entries.
+3. Add logging to /usr/bin/agneax-session-start using --log=/tmp/weston.log.
+4. Add logging to /opt/agneax/desktop/run.sh using /tmp/agneax-desktop.log.
+5. Fix LightDM Wayland autologin config and remove X11 session-wrapper unless required.
+6. Add or verify required runtime packages for PySide6 Qt Wayland inside the ISO rootfs.
+7. Fix DesktopShell.qml wallpaper path or copy branding to the expected location.
+8. Add a fallback session mode for VirtualBox using xcb or safe graphics if Wayland DRM fails.
+9. Update docs/build.md with VirtualBox settings:
+   - Graphics Controller: VMSVGA
+   - Video Memory: 128 MB
+   - Try 3D acceleration ON, then OFF if blank
+   - Use Safe Graphics Mode if standard mode fails
+   - Use Debug Console entry to inspect logs
+10. Provide exact commands to run from TTY:
+   - systemctl status lightdm --no-pager
+   - journalctl -b -u lightdm --no-pager
+   - cat /tmp/weston.log
+   - cat /tmp/agneax-desktop.log
+   - python3 -c 'import PySide6; print(PySide6.__version__)'
+   - cd /opt/agneax/desktop && python3 main.py
+
+Expected output:
+- A clear root-cause analysis.
+- Patch-level changes to the files above.
+- A rebuild command sequence.
+- A VirtualBox test checklist.
+- A fallback plan if Weston DRM does not work in VirtualBox."
+
+REBUILD COMMANDS AFTER FIXES
+
+On Ubuntu/Debian/WSL2 build environment:
+
+sudo ./scripts/install_deps.sh
+cd packages/agneax-core
+cargo build --release
+cd ../..
+mkdir -p desktop/cpp_src/build
+cd desktop/cpp_src/build
+cmake ..
+make
+cd ../../..
+sudo ./scripts/build_iso.sh
+
+Then boot:
+
+build/agneax-os-amd64.iso
+
+FINAL RECOMMENDATION
+
+For the next ISO build, create three boot options:
+
+1. Agneax OS Live
+- Normal user experience.
+
+2. Agneax OS Safe Graphics
+- Uses nomodeset and safer display settings.
+
+3. Agneax OS Debug Console
+- Boots to terminal with full logs.
+
+This will make VirtualBox issues much easier to diagnose instead of getting stuck on a blank cursor screen.

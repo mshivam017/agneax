@@ -97,9 +97,23 @@ apt-get install -y --no-install-recommends \
   lightdm \
   python3 \
   python3-pip \
+  qt6-wayland \
+  libegl1 \
+  libgl1 \
+  libgles2 \
+  mesa-utils \
+  dbus-x11 \
+  xdg-utils \
   libgl1-mesa-dri \
   libxkbcommon-x11-0 \
   libxcb-cursor0 \
+  libxcb-keysyms1 \
+  libxcb-randr0 \
+  libxcb-xinerama0 \
+  libxcb-icccm4 \
+  libxcb-image0 \
+  libxcb-render-util0 \
+  libxkbcommon0 \
   pipewire \
   pipewire-audio-client-libraries \
   sudo \
@@ -169,7 +183,9 @@ LEOF
 cat <<'LEOF' > /usr/bin/agneax-session-start
 #!/usr/bin/env bash
 # Start Weston compositor in fullscreen mode and autostart Agneax Shell
-weston --backend=drm --shell=kiosk-shell.so --continue-without-input --startup-cmd="/opt/agneax/desktop/run.sh"
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+weston --backend=drm --shell=kiosk-shell.so --continue-without-input --log=/tmp/weston.log --startup-cmd="/opt/agneax/desktop/run.sh"
 LEOF
 chmod +x /usr/bin/agneax-session-start
 
@@ -224,14 +240,14 @@ rm -f "$ROOTFS/tmp/agneax-store_1.0.0_amd64.deb"
 # Copy configs (lightdm, network, rules)
 cp -R configs/* "$ROOTFS/" || true
 
-# Configure startup run script inside rootfs
+# Configure startup run script inside rootfs (Step 4 of analysis)
 cat <<'EOF' > "$ROOTFS/opt/agneax/desktop/run.sh"
 #!/usr/bin/env bash
 # Startup script for Agneax Desktop environment inside Weston
 export QT_QPA_PLATFORM=wayland
 export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
 cd /opt/agneax/desktop
-python3 main.py
+python3 main.py >> /tmp/agneax-desktop.log 2>&1
 EOF
 chmod +x "$ROOTFS/opt/agneax/desktop/run.sh"
 
@@ -263,6 +279,7 @@ set timeout=5
 insmod ext2
 insmod fat
 insmod iso9660
+insmod all_video
 
 menuentry "Agneax OS Live (Standard Mode)" {
     search --set=root --file /live/vmlinuz
@@ -272,7 +289,13 @@ menuentry "Agneax OS Live (Standard Mode)" {
 
 menuentry "Agneax OS (Safe Graphics Mode)" {
     search --set=root --file /live/vmlinuz
-    linux /live/vmlinuz boot=live nomodeset quiet splash ---
+    linux /live/vmlinuz boot=live nomodeset loglevel=7 ---
+    initrd /live/initrd
+}
+
+menuentry "Agneax OS Debug Console" {
+    search --set=root --file /live/vmlinuz
+    linux /live/vmlinuz boot=live systemd.unit=multi-user.target loglevel=7 ---
     initrd /live/initrd
 }
 EOF

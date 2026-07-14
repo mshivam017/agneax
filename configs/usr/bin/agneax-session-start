@@ -8,4 +8,5 @@ export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
 weston --backend=drm \
        --shell=kiosk-shell.so \
        --continue-without-input \
+       --log=/tmp/weston.log \
        --startup-cmd="/opt/agneax/desktop/run.sh"

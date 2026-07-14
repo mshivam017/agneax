@@ -132,6 +132,17 @@ class SystemBridge(QObject):
         with self.lock:
             return json.dumps(self._telemetry)
 
+    @Property(str, constant=True)
+    def wallpaperPath(self):
+        opt_path = "/opt/agneax/branding/wallpaper.svg"
+        if os.path.exists(opt_path):
+            return "file://" + opt_path
+        # Return fallback path relative to main.py directory
+        local_path = os.path.join(os.path.dirname(__file__), "..", "branding", "wallpaper.svg")
+        # Replace backslashes with forward slashes for Windows URL compatibility
+        formatted_path = os.path.abspath(local_path).replace("\\", "/")
+        return "file:///" + formatted_path
+
     # Exposed Window management layout calculators (utilizes C++ libraries or Python fallback)
     @Slot(int, int, int, int, int, int, result=str)
     def calculateTilingGrid(self, screen_w, screen_h, taskbar_h, count, gap, index):

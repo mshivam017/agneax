@@ -50,7 +50,7 @@ ApplicationWindow {
     Image {
         id: bgImage
         anchors.fill: parent
-        source: "../branding/wallpaper.svg"
+        source: systemBridge.wallpaperPath
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
     }

@@ -59,6 +59,57 @@ This script will:
 The built ISO will be saved at:
 `build/agneax-os-amd64.iso`
 
+---
+
+## 🛠️ VirtualBox Running & Troubleshooting Guide
+
+If the ISO fails to boot cleanly or displays a blank/black screen with only a mouse cursor, please check the settings and run the following diagnostic procedures.
+
+### A. Recommended VirtualBox VM Parameters
+- **Graphics Controller**: Ensure it is set to **VMSVGA** (standard graphics card simulation for Linux/Wayland guests).
+- **Video Memory**: Allocate at least **128 MB** of video memory.
+- **3D Acceleration**: Toggle **Enable 3D Acceleration** on. If the desktop environment fails to render, toggle it **off** to force CPU software rendering paths.
+- **System Memory**: Allocate at least **4 GB** (minimum requirement for the live squashfs image runtime).
+
+### B. Accessing TTY Debug Console
+If the graphical environment is blank:
+1. Press the VirtualBox **Host Key + F2** (or **Ctrl + Alt + F2**) to switch away from the display server to a virtual TTY terminal.
+2. Login with credentials:
+   - **Username**: `agneax`
+   - **Password**: `agneax`
+
+### C. Live Diagnostics Commands
+Once logged into the terminal, run the following queries to determine the error location:
+
+1. **Check Display Server Status**:
+   ```bash
+   systemctl status lightdm --no-pager
+   ```
+2. **Review LightDM logs**:
+   ```bash
+   journalctl -b -u lightdm --no-pager
+   ```
+3. **Inspect Weston logs**:
+   ```bash
+   cat /tmp/weston.log
+   ```
+4. **Inspect Python Desktop app launch logs**:
+   ```bash
+   cat /tmp/agneax-desktop.log
+   ```
+5. **Verify PySide6 / Qt6 imports**:
+   ```bash
+   python3 -c "import PySide6; print(PySide6.__version__)"
+   python3 -c "from PySide6.QtWidgets import QApplication; print('Qt widgets OK')"
+   ```
+6. **Attempt Manual Launch of Desktop Shell**:
+   ```bash
+   export QT_QPA_PLATFORM=wayland
+   export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+   cd /opt/agneax/desktop && python3 main.py
+   ```
+
+
 You can test it using QEMU:
 ```bash
 qemu-system-x86_64 -enable-kvm -m 2G -cdrom build/agneax-os-amd64.iso
