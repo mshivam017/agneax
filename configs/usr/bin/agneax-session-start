@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Start Weston compositor in fullscreen mode and autostart Agneax Shell
+# Optimized for Wayland display rendering
+
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+
+weston --backend=drm \
+       --shell=kiosk-shell.so \
+       --continue-without-input \
+       --startup-cmd="/opt/agneax/desktop/run.sh"

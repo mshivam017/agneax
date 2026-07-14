@@ -1,0 +1,24 @@
+# Rust build artifacts
+/packages/agneax-core/target/
+Cargo.lock
+
+# C++ build directories
+/desktop/cpp_src/build/
+*.so
+*.dll
+*.o
+*.a
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Agneax OS generated ISO workspace
+/build/
+/iso/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
