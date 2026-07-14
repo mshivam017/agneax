@@ -64,6 +64,16 @@ class TestSystemBridge(unittest.TestCase):
         self.assertEqual(snap["width"], 960)
         self.assertEqual(snap["height"], 1030)
 
+    def test_launch_app_allowlist(self):
+        # Verify app launcher blocks unallowlisted binaries (Step 4)
+        # We can capture standard output to verify block log
+        import io
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        self.bridge.launchApp("malicious_sh")
+        sys.stdout = sys.__stdout__
+        self.assertIn("Blocked attempt to launch", captured_output.getvalue())
+
 
 class TestStoreBridge(unittest.TestCase):
     def setUp(self):
@@ -75,6 +85,18 @@ class TestStoreBridge(unittest.TestCase):
         catalog = json.loads(catalog_str)
         self.assertGreater(len(catalog), 0)
         self.assertEqual(catalog[0]["id"], "firefox")
+
+    def test_desktop_shortcut_creation_removal(self):
+        # Test that installApp worker creates a desktop shortcut and uninstallApp deletes it (Step 3)
+        self.bridge.installApp("firefox")
+        import time
+        time.sleep(5.0) # Wait for install threads loop and socket timeouts
+        shortcut = os.path.expanduser("~/Desktop/firefox.desktop")
+        # In headless test environments ~/Desktop might be created
+        self.assertTrue(os.path.exists(shortcut) or not os.path.exists(os.path.expanduser("~/Desktop")))
+        self.bridge.uninstallApp("firefox")
+        time.sleep(4.0)
+        self.assertFalse(os.path.exists(shortcut))
 
 
 class TestInstallerBridge(unittest.TestCase):

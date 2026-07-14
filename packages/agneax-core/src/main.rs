@@ -1,6 +1,6 @@
 use std::process::Command;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpListener;
 use serde::{Deserialize, Serialize};
 use sysinfo::{System, Components, Disks};
 
@@ -21,26 +21,55 @@ struct Response {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "127.0.0.1:9090";
-    let listener = TcpListener::bind(addr).await?;
-    println!("Agneax Core Rust daemon listening on {}", addr);
+    // 1. Linux UNIX Domain Sockets server startup logic (Step 6)
+    #[cfg(unix)]
+    {
+        let socket_path = "/run/agneax-core.sock";
+        let _ = std::fs::remove_file(socket_path); // Clear stale socket files
+        let listener = tokio::net::UnixListener::bind(socket_path)?;
+        println!("Agneax Core Rust daemon listening on UNIX socket {}", socket_path);
 
-    // Initial system collection
-    let mut sys = System::new_all();
-    sys.refresh_all();
+        // Adjust permissions so only owner and group can read/write to IPC socket
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = std::fs::metadata(socket_path) {
+            let mut perms = metadata.permissions();
+            perms.set_mode(0o660);
+            let _ = std::fs::set_permissions(socket_path, perms);
+        }
 
-    loop {
-        let (socket, _) = listener.accept().await?;
-        let mut sys_clone = System::new_all();
-        tokio::spawn(async move {
-            if let Err(e) = handle_connection(socket, &mut sys_clone).await {
-                eprintln!("Error handling connection: {:?}", e);
-            }
-        });
+        loop {
+            let (socket, _) = listener.accept().await?;
+            let mut sys_clone = System::new_all();
+            tokio::spawn(async move {
+                if let Err(e) = handle_stream(socket, &mut sys_clone).await {
+                    eprintln!("Error handling connection: {:?}", e);
+                }
+            });
+        }
+    }
+
+    // 2. Fallback TCP localhost loop on non-Linux systems
+    #[cfg(not(unix))]
+    {
+        let addr = "127.0.0.1:9090";
+        let listener = TcpListener::bind(addr).await?;
+        println!("Agneax Core Rust daemon listening on TCP {}", addr);
+
+        loop {
+            let (socket, _) = listener.accept().await?;
+            let mut sys_clone = System::new_all();
+            tokio::spawn(async move {
+                if let Err(e) = handle_stream(socket, &mut sys_clone).await {
+                    eprintln!("Error handling connection: {:?}", e);
+                }
+            });
+        }
     }
 }
 
-async fn handle_connection(mut socket: TcpStream, sys: &mut System) -> Result<(), Box<dyn std::error::Error>> {
+// Generic stream handler supporting both TCP and UNIX sockets dynamically (Step 6)
+async fn handle_stream<S>(mut socket: S, sys: &mut System) -> Result<(), Box<dyn std::error::Error>>
+where S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin {
     let mut buffer = [0; 4096];
     loop {
         let n = socket.read(&mut buffer).await?;
@@ -136,11 +165,15 @@ async fn handle_request(req: Request, sys: &mut System) -> Response {
                 .and_then(|p| p.get("enable").and_then(|e| e.as_bool()))
                 .unwrap_or(false);
 
-            let cmd = if enable { "ufw enable" } else { "ufw disable" };
+            // Execute explicit program lists calls without generic shells (Step 5)
             let output = if cfg!(target_os = "windows") {
                 Ok("Firewall rule mocked on Windows host".to_string())
             } else {
-                execute_shell_cmd(cmd)
+                if enable {
+                    run_command("ufw", &["enable"])
+                } else {
+                    run_command("ufw", &["disable"])
+                }
             };
 
             match output {
@@ -168,10 +201,11 @@ async fn handle_request(req: Request, sys: &mut System) -> Response {
             }
         }
         "pkg_update_cache" => {
+            // Execute explicit program lists calls without generic shells (Step 5)
             let output = if cfg!(target_os = "windows") {
                 Ok("Package update cache mocked on Windows".to_string())
             } else {
-                execute_shell_cmd("apt-get update -y")
+                run_command("apt-get", &["update", "-y"])
             };
 
             match output {
@@ -187,6 +221,74 @@ async fn handle_request(req: Request, sys: &mut System) -> Response {
                 },
             }
         }
+        "install_package" => {
+            let pkg_id = req.params
+                .as_ref()
+                .and_then(|p| p.get("package_id"))
+                .and_then(|id| id.as_str())
+                .unwrap_or("");
+
+            if pkg_id.is_empty() {
+                Response {
+                    status: "error".to_string(),
+                    data: None,
+                    message: Some("Empty package_id parameter".to_string()),
+                }
+            } else {
+                let output = if cfg!(target_os = "windows") {
+                    Ok("Package install mocked on Windows".to_string())
+                } else {
+                    run_command("apt-get", &["install", "-y", pkg_id])
+                };
+
+                match output {
+                    Ok(out) => Response {
+                        status: "success".to_string(),
+                        data: Some(serde_json::json!({ "package_id": pkg_id, "output": out })),
+                        message: None,
+                    },
+                    Err(e) => Response {
+                        status: "error".to_string(),
+                        data: None,
+                        message: Some(format!("Failed to install package {}: {}", pkg_id, e)),
+                    },
+                }
+            }
+        }
+        "uninstall_package" => {
+            let pkg_id = req.params
+                .as_ref()
+                .and_then(|p| p.get("package_id"))
+                .and_then(|id| id.as_str())
+                .unwrap_or("");
+
+            if pkg_id.is_empty() {
+                Response {
+                    status: "error".to_string(),
+                    data: None,
+                    message: Some("Empty package_id parameter".to_string()),
+                }
+            } else {
+                let output = if cfg!(target_os = "windows") {
+                    Ok("Package uninstall mocked on Windows".to_string())
+                } else {
+                    run_command("apt-get", &["remove", "-y", pkg_id])
+                };
+
+                match output {
+                    Ok(out) => Response {
+                        status: "success".to_string(),
+                        data: Some(serde_json::json!({ "package_id": pkg_id, "output": out })),
+                        message: None,
+                    },
+                    Err(e) => Response {
+                        status: "error".to_string(),
+                        data: None,
+                        message: Some(format!("Failed to uninstall package {}: {}", pkg_id, e)),
+                    },
+                }
+            }
+        }
         _ => Response {
             status: "error".to_string(),
             data: None,
@@ -195,10 +297,10 @@ async fn handle_request(req: Request, sys: &mut System) -> Response {
     }
 }
 
-fn execute_shell_cmd(cmd: &str) -> Result<String, std::io::Error> {
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(cmd)
+// Secure command executor passing arguments directly rather than raw shell lines (Step 5)
+fn run_command(program: &str, args: &[&str]) -> Result<String, std::io::Error> {
+    let output = Command::new(program)
+        .args(args)
         .output()?;
     
     if output.status.success() {

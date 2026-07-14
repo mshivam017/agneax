@@ -106,17 +106,18 @@ ApplicationWindow {
                         spacing: 12
                         
                         Text {
-                            text: "Welcome to Agneax OS"
+                            text: "Welcome to Agneax OS (Simulation Mode)"
                             font.bold: true
-                            font.pixelSize: 22
-                            color: instWindow.activeAccentColor
+                            font.pixelSize: 20
+                            color: "#FF5E62"
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
 
                         Text {
-                            text: "This helper wizard will guide you through setting up and installing a clean copy of Agneax OS on your computer. Please select your preferences below."
-                            font.pixelSize: 11
-                            color: instWindow.textSecondaryColor
+                            text: "⚠️ THIS IS A SIMULATION ONLY. It will not modify your target hard drive partitions or overwrite boot blocks. This layout is designed for prototyping and testing user onboarding."
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: "#FFDF00"
                             horizontalAlignment: Text.AlignHCenter
                             Layout.preferredWidth: 500
                             anchors.horizontalCenter: parent.horizontalCenter

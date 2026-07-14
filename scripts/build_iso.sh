@@ -19,6 +19,12 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Validate WORKDIR before deletion (Step 9)
+if [ -z "$WORKDIR" ] || [ "$WORKDIR" = "/" ] || [ "$WORKDIR" = "." ]; then
+  echo "Error: Invalid WORKDIR value: '$WORKDIR'"
+  exit 1
+fi
+
 # Clean previous build directories
 echo "Cleaning old build files..."
 umount -lf "$ROOTFS/proc" || true
@@ -32,6 +38,16 @@ mkdir -p "$WORKDIR"
 mkdir -p "$ROOTFS"
 mkdir -p "$IMAGE/live"
 mkdir -p "$IMAGE/boot/grub"
+
+# Setup cleanup trap handler for failed chroot mounts (Step 9)
+cleanup() {
+  echo "=== Cleaning up mounts ==="
+  umount -lf "$ROOTFS/proc" || true
+  umount -lf "$ROOTFS/sys" || true
+  umount -lf "$ROOTFS/dev/pts" || true
+  umount -lf "$ROOTFS/dev" || true
+}
+trap cleanup EXIT INT TERM
 
 # Install base system using debootstrap
 echo "Debootstrapping minimal Debian system..."
@@ -104,10 +120,32 @@ echo "agneax:agneax" | chpasswd
 usermod -aG sudo,video,audio,cdrom agneax
 echo "agneax ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Enable LightDM display manager
+# Enable system services
 systemctl enable lightdm
 systemctl enable NetworkManager
 systemctl enable ufw
+
+# Add agneax-core systemd service (Step 3)
+cat <<'LEOF' > /etc/systemd/system/agneax-core.service
+[Unit]
+Description=Agneax OS System Telemetry & Privilege Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/agneax-core
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+LEOF
+
+systemctl enable agneax-core
 
 # Set up autostart for weston and custom Agneax shell
 mkdir -p /etc/lightdm/lightdm.conf.d

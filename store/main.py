@@ -56,11 +56,18 @@ class StoreBridge(QObject):
 
         # Attempt to make real installation using Rust privileged executor if live
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(2.0)
+            # Check for UNIX domain socket on Linux (Step 6)
+            if sys.platform != "win32" and os.path.exists("/run/agneax-core.sock"):
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                s.connect("/run/agneax-core.sock")
+            else:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.connect(("127.0.0.1", 9090))
-                # Trigger a mock package update cache or install script execution
-                req = json.dumps({"method": "pkg_update_cache"})
+
+            with s:
+                s.settimeout(2.0)
+                # Trigger a real package install (Step 8)
+                req = json.dumps({"method": "install_package", "params": {"package_id": app_id}})
                 s.sendall(req.encode('utf-8'))
                 res = s.recv(1024)
                 print(f"Daemon install verification: {res.decode('utf-8')}")
@@ -99,6 +106,25 @@ class StoreBridge(QObject):
             if app["id"] == app_id:
                 app["installed"] = False
                 break
+
+        # Attempt to make real uninstallation using Rust privileged executor if live (Step 8)
+        try:
+            # Check for UNIX domain socket on Linux (Step 6)
+            if sys.platform != "win32" and os.path.exists("/run/agneax-core.sock"):
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                s.connect("/run/agneax-core.sock")
+            else:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.connect(("127.0.0.1", 9090))
+
+            with s:
+                s.settimeout(2.0)
+                req = json.dumps({"method": "uninstall_package", "params": {"package_id": app_id}})
+                s.sendall(req.encode('utf-8'))
+                res = s.recv(1024)
+                print(f"Daemon uninstall verification: {res.decode('utf-8')}")
+        except Exception:
+            pass
 
         # Remove desktop shortcut
         try:

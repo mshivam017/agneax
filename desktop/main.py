@@ -65,10 +65,16 @@ class SystemBridge(QObject):
     def _telemetry_worker(self):
         while self.running:
             try:
-                # Attempt connection to Rust daemon
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.settimeout(2.0)
+                # Check for UNIX domain socket on Linux (Step 6)
+                if sys.platform != "win32" and os.path.exists("/run/agneax-core.sock"):
+                    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    s.connect("/run/agneax-core.sock")
+                else:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     s.connect(("127.0.0.1", 9090))
+
+                with s:
+                    s.settimeout(2.0)
                     while self.running:
                         req = json.dumps({"method": "get_telemetry"})
                         s.sendall(req.encode('utf-8'))
@@ -203,21 +209,30 @@ class SystemBridge(QObject):
 
     @Slot(str)
     def launchApp(self, app_name):
-        print(f"Launching application: {app_name}")
-        # Launch custom modules in subprocesses
-        if app_name == "control-center":
-            os.system("python3 ../control-center/main.py &")
-        elif app_name == "store":
-            os.system("python3 ../store/main.py &")
-        elif app_name == "installer":
-            os.system("python3 ../installer/main.py &")
-        elif app_name == "terminal":
-            os.system("python3 terminal.py &")
-        elif app_name == "file-manager":
-            os.system("python3 file_manager.py &")
+        print(f"Launching application safely: {app_name}")
+        import subprocess
+
+        # Strict allowlist of commands to execute (Step 4)
+        allowlist = {
+            "control-center": ["python3", "../control-center/main.py"],
+            "store": ["python3", "../store/main.py"],
+            "installer": ["python3", "../installer/main.py"],
+            "terminal": ["python3", "terminal.py"],
+            "file-manager": ["python3", "file_manager.py"],
+            "firefox": ["firefox"],
+            "vlc": ["vlc"],
+            "steam": ["steam"],
+            "discord": ["discord"]
+        }
+
+        if app_name in allowlist:
+            try:
+                subprocess.Popen(allowlist[app_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                print(f"Launched application: {app_name}")
+            except Exception as e:
+                print(f"Error launching {app_name}: {e}")
         else:
-            # Generic binary trigger
-            os.system(f"{app_name} &")
+            print(f"Blocked attempt to launch non-allowlisted application: {app_name}")
 
 def main():
     app = QApplication(sys.argv)

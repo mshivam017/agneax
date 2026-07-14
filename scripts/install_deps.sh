@@ -44,4 +44,3 @@ else
 fi
 
 echo "Dependencies installation completed successfully!"
-EOF
