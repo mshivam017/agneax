@@ -123,6 +123,18 @@ ApplicationWindow {
                         active: ccWindow.currentCategory == 4
                         onClicked: ccWindow.currentCategory = 4
                     }
+                    SidebarItem {
+                        title: "Sound & Display"
+                        icon: "🔊"
+                        active: ccWindow.currentCategory == 5
+                        onClicked: ccWindow.currentCategory = 5
+                    }
+                    SidebarItem {
+                        title: "Backup & Power"
+                        icon: "🔋"
+                        active: ccWindow.currentCategory == 6
+                        onClicked: ccWindow.currentCategory = 6
+                    }
                 }
 
                 Item { Layout.fillHeight: true } // Spacer
@@ -523,6 +535,225 @@ ApplicationWindow {
                                     Text { text: "🐳 Docker Engine"; font.pixelSize: 11; color: ccWindow.textPrimaryColor }
                                     Item { Layout.fillWidth: true }
                                     Button { text: "Install"; font.pixelSize: 9 }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Category 5: Sound & Display
+            ScrollView {
+                clip: true
+                ColumnLayout {
+                    width: parent.width - 40
+                    anchors.top: parent.top
+                    anchors.topMargin: 24
+                    anchors.left: parent.left
+                    anchors.leftMargin: 20
+                    spacing: 16
+
+                    Text {
+                        text: "Display & Audio Settings"
+                        font.bold: true
+                        font.pixelSize: 20
+                        color: ccWindow.textPrimaryColor
+                    }
+
+                    // Display Card
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 140
+                        color: ccWindow.cardBgColor
+                        radius: 12
+                        border.color: ccWindow.borderColor
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            spacing: 10
+
+                            Text { text: "Display Settings"; font.bold: true; font.pixelSize: 12; color: ccWindow.activeAccentColor }
+
+                            RowLayout {
+                                spacing: 20
+                                Column {
+                                    spacing: 4
+                                    Text { text: "Screen Resolution"; font.pixelSize: 10; color: ccWindow.textSecondaryColor }
+                                    ComboBox {
+                                        model: ["1920 x 1080 (16:9)", "1440 x 900 (16:10)", "1280 x 720 (16:9)", "1024 x 768 (4:3)"]
+                                        width: 180
+                                    }
+                                }
+
+                                Column {
+                                    spacing: 4
+                                    Text { text: "Refresh Rate"; font.pixelSize: 10; color: ccWindow.textSecondaryColor }
+                                    ComboBox {
+                                        model: ["60 Hz", "120 Hz", "144 Hz"]
+                                        width: 120
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Audio Card
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 180
+                        color: ccWindow.cardBgColor
+                        radius: 12
+                        border.color: ccWindow.borderColor
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            spacing: 10
+
+                            Text { text: "Audio Settings (PipeWire)"; font.bold: true; font.pixelSize: 12; color: ccWindow.activeAccentColor }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Output Device"; font.pixelSize: 10; color: ccWindow.textSecondaryColor; Layout.preferredWidth: 100 }
+                                ComboBox {
+                                    model: ["Built-in Analog Stereo Speakers", "HDMI Audio Output Controller", "External Headset Jack"]
+                                    Layout.fillWidth: true
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Master Volume"; font.pixelSize: 10; color: ccWindow.textSecondaryColor; Layout.preferredWidth: 100 }
+                                Slider {
+                                    id: volumeSlider
+                                    value: 0.8
+                                    Layout.fillWidth: true
+                                }
+                                Text {
+                                    text: Math.round(volumeSlider.value * 100) + "%"
+                                    font.pixelSize: 11
+                                    color: ccWindow.textPrimaryColor
+                                }
+                            }
+                    // Accessibility Tools Card (Step 6.1)
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 150
+                        color: ccWindow.cardBgColor
+                        radius: 12
+                        border.color: ccWindow.borderColor
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            spacing: 10
+
+                            Text { text: "Accessibility Tools"; font.bold: true; font.pixelSize: 12; color: ccWindow.activeAccentColor }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Screen Reader Speech Utility"; font.pixelSize: 10; color: ccWindow.textSecondaryColor }
+                                Item { Layout.fillWidth: true }
+                                Switch { checked: false }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Desktop Screen Magnifier"; font.pixelSize: 10; color: ccWindow.textSecondaryColor }
+                                Item { Layout.fillWidth: true }
+                                Switch { checked: false }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Category 6: Backup & Power
+            ScrollView {
+                clip: true
+                ColumnLayout {
+                    width: parent.width - 40
+                    anchors.top: parent.top
+                    anchors.topMargin: 24
+                    anchors.left: parent.left
+                    anchors.leftMargin: 20
+                    spacing: 16
+
+                    Text {
+                        text: "Backup & Power Configuration"
+                        font.bold: true
+                        font.pixelSize: 20
+                        color: ccWindow.textPrimaryColor
+                    }
+
+                    // Backup Card
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 150
+                        color: ccWindow.cardBgColor
+                        radius: 12
+                        border.color: ccWindow.borderColor
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            spacing: 10
+
+                            Text { text: "Scheduled Backups (Timeshift Hooks)"; font.bold: true; font.pixelSize: 12; color: ccWindow.activeAccentColor }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Automatic System Backups"; font.pixelSize: 10; color: ccWindow.textSecondaryColor }
+                                Item { Layout.fillWidth: true }
+                                Switch { id: backupSwitch; checked: true }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: backupSwitch.checked
+                                Text { text: "Backup Frequency"; font.pixelSize: 10; color: ccWindow.textSecondaryColor }
+                                Item { Layout.fillWidth: true }
+                                ComboBox {
+                                    model: ["Hourly", "Daily", "Weekly", "Monthly"]
+                                    width: 120
+                                }
+                            }
+                        }
+                    }
+
+                    // Power Card
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 160
+                        color: ccWindow.cardBgColor
+                        radius: 12
+                        border.color: ccWindow.borderColor
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            spacing: 10
+
+                            Text { text: "Power Management Plan"; font.bold: true; font.pixelSize: 12; color: ccWindow.activeAccentColor }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Select Power Profile"; font.pixelSize: 10; color: ccWindow.textSecondaryColor }
+                                Item { Layout.fillWidth: true }
+                                ComboBox {
+                                    model: ["High Performance Mode", "Balanced Mode (Recommended)", "Power Saving Saver Mode"]
+                                    width: 220
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Turn off screen after idle"; font.pixelSize: 10; color: ccWindow.textSecondaryColor }
+                                Item { Layout.fillWidth: true }
+                                ComboBox {
+                                    model: ["5 Minutes", "15 Minutes", "30 Minutes", "Never"]
+                                    width: 120
                                 }
                             }
                         }

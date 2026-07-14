@@ -1,32 +1,29 @@
 import sys
 import os
 import subprocess
-import threading
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QLineEdit, QTabWidget, 
-                             QComboBox, QLabel, QPushButton)
+                             QComboBox, QLabel, QPushButton, QSplitter)
 from PySide6.QtCore import Qt, Signal, Slot, QProcess
 from PySide6.QtGui import QFont, QTextCursor
 
-class TerminalTab(QWidget):
-    outputReceived = Signal(str)
-
-    def __init__(self):
+class TerminalSession(QWidget):
+    def __init__(self, parent_tab, theme):
         super().__init__()
+        self.parent_tab = parent_tab
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
 
-        # Output viewer pane
+        # Output Text Area
         self.output_area = QTextEdit()
         self.output_area.setReadOnly(True)
         self.output_area.setFont(QFont("Consolas, Courier New, monospace", 11))
-        self.output_area.setStyleSheet("background-color: #0B0D13; color: #00FF66; border: none; padding: 10px;")
         self.layout.addWidget(self.output_area)
 
-        # Input line layout
+        # Input Prompt Line
         self.input_layout = QHBoxLayout()
-        self.input_layout.setContentsMargins(10, 5, 10, 10)
+        self.input_layout.setContentsMargins(8, 4, 8, 8)
         self.input_layout.setSpacing(6)
         
         self.prompt_label = QLabel("$")
@@ -41,17 +38,16 @@ class TerminalTab(QWidget):
 
         self.layout.addLayout(self.input_layout)
 
-        # Interactive Shell process runner
+        # Start shell process
         self.process = QProcess(self)
         self.process.readyReadStandardOutput.connect(self.read_stdout)
         self.process.readyReadStandardError.connect(self.read_stderr)
         
-        # Start command interpreter shell
         shell = "powershell.exe" if sys.platform == "win32" else "/bin/bash"
         self.process.start(shell)
         
-        # Initial greeting banner
         self.output_area.append("=== Agneax GPU-Accelerated Terminal v0.1.0 ===\n")
+        self.apply_theme(theme)
 
     def read_stdout(self):
         data = self.process.readAllStandardOutput().data().decode('utf-8', errors='ignore')
@@ -66,62 +62,86 @@ class TerminalTab(QWidget):
     def send_command(self):
         cmd = self.input_line.text()
         self.input_line.clear()
-        
-        # Append input line locally
         self.output_area.append(f"\n$ {cmd}\n")
-        
-        # Write to shell stream
         self.process.write((cmd + "\n").encode('utf-8'))
+
+    def apply_theme(self, theme):
+        if theme == "Agneax Neon":
+            self.output_area.setStyleSheet("background-color: #0B0D13; color: #00FF66; border: none; padding: 10px;")
+        elif theme == "Dracula Dark":
+            self.output_area.setStyleSheet("background-color: #282a36; color: #f8f8f2; border: none; padding: 10px;")
+        elif theme == "Cyberpunk Pink":
+            self.output_area.setStyleSheet("background-color: #1a0826; color: #ff007f; border: none; padding: 10px;")
+
+
+class SplitTerminalTab(QWidget):
+    def __init__(self, theme):
+        super().__init__()
+        self.theme = theme
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+
+        # Splitting Container (Step 5.2 - Splits vertical / horizontal)
+        self.splitter = QSplitter(Qt.Horizontal)
+        self.layout.addWidget(self.splitter)
+
+        # Main/First session inside tab
+        self.session1 = TerminalSession(self, theme)
+        self.splitter.addWidget(self.session1)
+        self.session2 = None
+
+    def split(self, orientation):
+        # Toggles horizontal or vertical splits inside splitter
+        self.splitter.setOrientation(orientation)
+        if not self.session2:
+            self.session2 = TerminalSession(self, self.theme)
+            self.splitter.addWidget(self.session2)
+            print("Terminal tab split created successfully.")
+
+    def change_theme(self, theme):
+        self.theme = theme
+        self.session1.apply_theme(theme)
+        if self.session2:
+            self.session2.apply_theme(theme)
 
 
 class TerminalWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Agneax Console")
-        self.resize(750, 480)
+        self.resize(800, 520)
         
-        # Theme stylesheet
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #0F1219;
-            }
-            QTabWidget::pane {
-                border: 1px solid rgba(255,255,255,0.08);
-                background-color: #0F1219;
-            }
-            QTabBar::tab {
-                background-color: #0B0D13;
-                color: #A0AEC0;
-                padding: 8px 16px;
-                border-right: 1px solid rgba(255,255,255,0.05);
-            }
-            QTabBar::tab:selected {
-                background-color: #141821;
-                color: #FFFFFF;
-                border-bottom: 2px solid #00F2FE;
-            }
-            QComboBox {
-                background-color: #0B0D13;
-                color: #FFFFFF;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 4px;
-                padding: 4px;
-            }
+            QMainWindow { background-color: #0F1219; }
+            QTabWidget::pane { border: 1px solid rgba(255,255,255,0.08); background-color: #0F1219; }
+            QTabBar::tab { background-color: #0B0D13; color: #A0AEC0; padding: 8px 16px; border-right: 1px solid rgba(255,255,255,0.05); }
+            QTabBar::tab:selected { background-color: #141821; color: #FFFFFF; border-bottom: 2px solid #00F2FE; }
+            QComboBox { background-color: #0B0D13; color: #FFFFFF; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px; }
+            QPushButton { background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: white; padding: 4px 10px; }
+            QPushButton:hover { background-color: rgba(255,255,255,0.10); }
         """)
 
-        # Central widgets layout
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
         self.layout.setContentsMargins(10, 10, 10, 10)
         
-        # Toolbar header (Add tab + Theme selector)
+        # Toolbar Header
         self.header_layout = QHBoxLayout()
         
         self.btn_new_tab = QPushButton("+ New Tab")
-        self.btn_new_tab.setStyleSheet("background-color: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 4px 10px; border-radius: 4px;")
         self.btn_new_tab.clicked.connect(self.add_terminal_tab)
         self.header_layout.addWidget(self.btn_new_tab)
+
+        # Split controls (Step 5.2)
+        self.btn_split_h = QPushButton("Split ⇄")
+        self.btn_split_h.clicked.connect(lambda: self.split_active_tab(Qt.Horizontal))
+        self.header_layout.addWidget(self.btn_split_h)
+
+        self.btn_split_v = QPushButton("Split ⇅")
+        self.btn_split_v.clicked.connect(lambda: self.split_active_tab(Qt.Vertical))
+        self.header_layout.addWidget(self.btn_split_v)
 
         self.header_layout.addStretch()
 
@@ -136,35 +156,29 @@ class TerminalWindow(QMainWindow):
 
         self.layout.addLayout(self.header_layout)
 
-        # Tab view manager
+        # Tab Widget
         self.tab_widget = QTabWidget()
         self.layout.addWidget(self.tab_widget)
         
         self.add_terminal_tab()
 
     def add_terminal_tab(self):
-        tab = TerminalTab()
+        theme = self.theme_combo.currentText()
+        tab = SplitTerminalTab(theme)
         index = self.tab_widget.addTab(tab, f"Shell {self.tab_widget.count() + 1}")
         self.tab_widget.setCurrentIndex(index)
-        self.apply_theme_to_tab(tab, self.theme_combo.currentText())
 
-    def change_theme(self, index):
+    def split_active_tab(self, orientation):
+        tab = self.tab_widget.currentWidget()
+        if tab:
+            tab.split(orientation)
+
+    def change_theme(self):
         theme_name = self.theme_combo.currentText()
         for i in range(self.tab_widget.count()):
             tab = self.tab_widget.widget(i)
-            self.apply_theme_to_tab(tab, theme_name)
-
-    def apply_theme_to_tab(self, tab, theme_name):
-        if not tab:
-            return
-        
-        # Color palettes profiles
-        if theme_name == "Agneax Neon":
-            tab.output_area.setStyleSheet("background-color: #0B0D13; color: #00FF66; border: none; padding: 10px;")
-        elif theme_name == "Dracula Dark":
-            tab.output_area.setStyleSheet("background-color: #282a36; color: #f8f8f2; border: none; padding: 10px;")
-        elif theme_name == "Cyberpunk Pink":
-            tab.output_area.setStyleSheet("background-color: #1a0826; color: #ff007f; border: none; padding: 10px;")
+            if tab:
+                tab.change_theme(theme_name)
 
 def main():
     app = QApplication(sys.argv)

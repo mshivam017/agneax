@@ -157,17 +157,17 @@ ApplicationWindow {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 280
+                    height: 350
                     color: instWindow.cardBgColor
                     radius: 12
                     border.color: instWindow.borderColor
 
                     ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 24
-                        spacing: 14
+                        anchors.margins: 20
+                        spacing: 12
 
-                        Text { text: "Select Target Installation Drive"; font.bold: true; font.pixelSize: 14; color: instWindow.textPrimaryColor }
+                        Text { text: "Select Target Drive & Partition Setup"; font.bold: true; font.pixelSize: 13; color: instWindow.textPrimaryColor }
 
                         ListModel {
                             id: driveListModel
@@ -180,12 +180,13 @@ ApplicationWindow {
 
                         ListView {
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
+                            Layout.preferredHeight: 110
                             model: driveListModel
-                            spacing: 8
+                            spacing: 6
+                            clip: true
                             delegate: Rectangle {
                                 width: parent.width
-                                height: 48
+                                height: 44
                                 radius: 8
                                 color: instWindow.selectedDrive == model.path ? "rgba(0, 242, 254, 0.1)" : "rgba(255, 255, 255, 0.03)"
                                 border.color: instWindow.selectedDrive == model.path ? instWindow.activeAccentColor : "rgba(255, 255, 255, 0.08)"
@@ -193,22 +194,78 @@ ApplicationWindow {
 
                                 RowLayout {
                                     anchors.fill: parent
-                                    anchors.leftMargin: 16
-                                    anchors.rightMargin: 16
+                                    anchors.leftMargin: 12
+                                    anchors.rightMargin: 12
 
-                                    Text { text: "💽"; font.pixelSize: 18 }
+                                    Text { text: "💽"; font.pixelSize: 16 }
                                     Column {
-                                        Text { text: model.model; font.bold: true; font.pixelSize: 11; color: instWindow.textPrimaryColor }
-                                        Text { text: model.path + " | TYPE: " + model.type; font.pixelSize: 9; color: instWindow.textSecondaryColor }
+                                        Text { text: model.model; font.bold: true; font.pixelSize: 10; color: instWindow.textPrimaryColor }
+                                        Text { text: model.path + " | " + model.type; font.pixelSize: 8; color: instWindow.textSecondaryColor }
                                     }
                                     Item { Layout.fillWidth: true }
-                                    Text { text: model.size; font.pixelSize: 11; font.bold: true; color: instWindow.textPrimaryColor }
+                                    Text { text: model.size; font.pixelSize: 10; font.bold: true; color: instWindow.textPrimaryColor }
                                 }
 
                                 MouseArea {
                                     anchors.fill: parent
                                     onClicked: instWindow.selectedDrive = model.path
                                 }
+                            }
+                        }
+
+                        // Partition Visualizer Grid (Step 4.1)
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            visible: instWindow.selectedDrive !== ""
+
+                            Text { text: "Automatic Partition Tiling Layout Map:"; font.pixelSize: 9; color: instWindow.textSecondaryColor }
+                            RowLayout {
+                                spacing: 4
+                                Layout.fillWidth: true
+                                height: 28
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: 15
+                                    height: 28; color: "#00F2FE"; radius: 4
+                                    Text { anchors.centerIn: parent; text: "sda1\nEFI (512MB)"; font.pixelSize: 8; font.bold: true; color: "#0F1219"; horizontalAlignment: Text.AlignHCenter }
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: 70
+                                    height: 28; color: "#1E293B"; radius: 4; border.color: "rgba(255,255,255,0.1)"
+                                    Text { anchors.centerIn: parent; text: "sda2 (System ext4 Rootfs)"; font.pixelSize: 8; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter }
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: 15
+                                    height: 28; color: "#FF5E62"; radius: 4
+                                    Text { anchors.centerIn: parent; text: "sda3\nSwap (4GB)"; font.pixelSize: 8; font.bold: true; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter }
+                                }
+                            }
+                        }
+
+                        // LUKS Disk Encryption (Step 4.2)
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            visible: instWindow.selectedDrive !== ""
+
+                            Switch {
+                                id: encryptSwitch
+                                text: "Encrypt Agneax installation drive (LUKS)"
+                                font.pixelSize: 10
+                                font.bold: true
+                            }
+                            Item { Layout.fillWidth: true }
+                            TextField {
+                                placeholderText: "Encryption Passphrase"
+                                echoMode: TextInput.Password
+                                visible: encryptSwitch.checked
+                                font.pixelSize: 9
+                                selectByMouse: true
+                                width: 180
                             }
                         }
                     }

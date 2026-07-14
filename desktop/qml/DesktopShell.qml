@@ -23,6 +23,7 @@ ApplicationWindow {
     // Open/Close triggers for Panels
     property bool startMenuOpen: false
     property bool quickSettingsOpen: false
+    property int snapPreviewDirection: 0 // 0=None, 1=Left, 2=Right, 7=Fullscreen
 
     // Telemetry storage (updated from SystemBridge python class)
     property var telemetry: {
@@ -120,5 +121,49 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 52
+    }
+
+    // Floating Dock Launcher (Step 1.2)
+    Dock {
+        id: dock
+        anchors.bottom: panel.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 8
+        visible: !root.startMenuOpen && !root.quickSettingsOpen
+    }
+
+    // Snapping Highlight Preview Overlay (Step 1.1)
+    Rectangle {
+        id: snapPreview
+        visible: root.snapPreviewDirection > 0
+        color: "rgba(0, 242, 254, 0.15)"
+        border.color: root.accentColor
+        border.width: 2
+        radius: 12
+
+        // Set layout geometries dynamically on drag status
+        x: {
+            if (root.snapPreviewDirection == 1) return 0;
+            if (root.snapPreviewDirection == 2) return root.width / 2;
+            return 0;
+        }
+        y: 0
+        width: {
+            if (root.snapPreviewDirection == 1 || root.snapPreviewDirection == 2) return root.width / 2;
+            return root.width;
+        }
+        height: root.height - panel.height
+
+        Behavior on x { NumberAnimation { duration: 150 } }
+        Behavior on width { NumberAnimation { duration: 150 } }
+        Behavior on height { NumberAnimation { duration: 150 } }
+    }
+
+    // Default Running Window on Desktop
+    DesktopWindow {
+        windowTitle: "Agneax System Settings"
+        iconText: "⚙️"
+        x: 150
+        y: 120
     }
 }

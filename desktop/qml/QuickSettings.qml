@@ -94,6 +94,13 @@ Rectangle {
                 icon: "💻"
                 active: false
             }
+
+            // Accessibility Toggle (Step 6.1)
+            QSToggleButton {
+                label: "Access"
+                icon: "👁️"
+                active: false
+            }
         }
 
         // Sliders Section (Volume and Brightness)

@@ -21,6 +21,7 @@ ApplicationWindow {
 
     property string activeFilter: "All"
     property var catalogList: JSON.parse(storeBridge.getCatalog())
+    property var selectedApp: null
 
     // Tracks downloading status
     property var downloadingApps: ({})
@@ -301,8 +302,170 @@ ApplicationWindow {
                                             }
                                         }
                                     }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: storeWindow.selectedApp = modelData
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // App Details Modal Dialog Overlay (Step 3.1)
+    Rectangle {
+        id: detailsOverlay
+        visible: storeWindow.selectedApp !== null
+        anchors.fill: parent
+        color: "rgba(10, 12, 17, 0.85)"
+
+        // Click outside to close
+        MouseArea {
+            anchors.fill: parent
+            onClicked: storeWindow.selectedApp = null
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: 580
+            height: 460
+            color: storeWindow.cardBgColor
+            border.color: storeWindow.borderColor
+            border.width: 1
+            radius: 16
+
+            // Intercept mouse clicks inside the dialog
+            MouseArea { anchors.fill: parent }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 24
+                spacing: 16
+
+                // Header info
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 14
+
+                    Rectangle {
+                        width: 48
+                        height: 48
+                        color: "rgba(255,255,255,0.05)"
+                        radius: 10
+                        Text {
+                            anchors.centerIn: parent
+                            text: storeWindow.selectedApp ? storeWindow.selectedApp.icon : ""
+                            font.pixelSize: 28
+                        }
+                    }
+
+                    Column {
+                        Text {
+                            text: storeWindow.selectedApp ? storeWindow.selectedApp.name : ""
+                            font.bold: true
+                            font.pixelSize: 14
+                            color: storeWindow.textPrimaryColor
+                        }
+                        Text {
+                            text: storeWindow.selectedApp ? "Rating: ⭐⭐⭐⭐⛤ (4.7) | Size: " + storeWindow.selectedApp.size : ""
+                            font.pixelSize: 9
+                            color: storeWindow.textSecondaryColor
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Button {
+                        text: "✕"
+                        flat: true
+                        onClicked: storeWindow.selectedApp = null
+                    }
+                }
+
+                // Description
+                Text {
+                    text: storeWindow.selectedApp ? storeWindow.selectedApp.desc : ""
+                    font.pixelSize: 11
+                    color: storeWindow.textSecondaryColor
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                }
+
+                // Screenshots Horizontal Slider (Step 3.1)
+                Text { text: "Screenshots"; font.bold: true; font.pixelSize: 10; color: storeWindow.activeAccentColor }
+                Row {
+                    spacing: 12
+                    Layout.fillWidth: true
+                    
+                    Repeater {
+                        model: 3
+                        delegate: Rectangle {
+                            width: 155; height: 90; radius: 8
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: "#1A2333" }
+                                GradientStop { position: 1.0; color: "#0B0D13" }
+                            }
+                            border.color: "rgba(255,255,255,0.05)"
+                            
+                            // Mock graphic outline shape
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 30; height: 20
+                                color: "transparent"
+                                border.color: "rgba(255,255,255,0.15)"
+                                border.width: 1
+                                radius: 4
+                            }
+                        }
+                    }
+                }
+
+                // Reviews Section (Step 3.1)
+                Text { text: "User Reviews"; font.bold: true; font.pixelSize: 10; color: storeWindow.activeAccentColor }
+                
+                Column {
+                    spacing: 8
+                    Layout.fillWidth: true
+
+                    Rectangle {
+                        width: parent.width; height: 38; color: "rgba(255,255,255,0.02)"; radius: 8
+                        Text { anchors.centerIn: parent; text: "🗣️ \"Excellent tool, runs incredibly smooth on Agneax!\" - DeveloperUser"; font.pixelSize: 9; color: storeWindow.textSecondaryColor }
+                    }
+                    Rectangle {
+                        width: parent.width; height: 38; color: "rgba(255,255,255,0.02)"; radius: 8
+                        Text { anchors.centerIn: parent; text: "🗣️ \"Native packaging was configured flawlessly on my build.\" - SystemAdmin"; font.pixelSize: 9; color: storeWindow.textSecondaryColor }
+                    }
+                }
+
+                // Actions Button footer
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 12
+                    Item { Layout.fillWidth: true }
+
+                    Button {
+                        text: {
+                            if (!storeWindow.selectedApp) return "Install";
+                            return storeWindow.selectedApp.installed ? "Uninstall" : "Install";
+                        }
+                        background: Rectangle {
+                            radius: 8
+                            color: storeWindow.activeAccentColor
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            font.bold: true
+                            color: "#0F1219"
+                        }
+                        onClicked: {
+                            if (storeWindow.selectedApp.installed) {
+                                storeBridge.uninstallApp(storeWindow.selectedApp.id);
+                            } else {
+                                storeBridge.installApp(storeWindow.selectedApp.id);
+                            }
+                            storeWindow.selectedApp = null;
                         }
                     }
                 }

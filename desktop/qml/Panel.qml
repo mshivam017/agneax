@@ -52,6 +52,38 @@ Rectangle {
             }
         }
 
+        // Virtual Desktop Workspace Pager (Step 1.3)
+        Row {
+            spacing: 6
+            Layout.leftMargin: 12
+            property int activeWorkspace: 1
+
+            Repeater {
+                model: 3
+                delegate: Rectangle {
+                    width: 20
+                    height: 20
+                    radius: 10
+                    color: index + 1 == parent.activeWorkspace ? root.accentColor : "rgba(255, 255, 255, 0.08)"
+                    border.color: index + 1 == parent.activeWorkspace ? "#FFFFFF" : "rgba(255, 255, 255, 0.15)"
+                    border.width: 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: (index + 1).toString()
+                        font.pixelSize: 9
+                        font.bold: true
+                        color: index + 1 == parent.activeWorkspace ? "#0F1219" : "#FFFFFF"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: parent.parent.activeWorkspace = index + 1
+                    }
+                }
+            }
+        }
+
         Item { Layout.fillWidth: true } // Spacer
 
         // Center Section: Running Applications Launcher

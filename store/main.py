@@ -67,6 +67,27 @@ class StoreBridge(QObject):
         except Exception:
             pass
 
+        # Generate desktop shortcut (Step 3.2)
+        try:
+            desktop_path = os.path.expanduser("~/Desktop")
+            if not os.path.exists(desktop_path):
+                os.makedirs(desktop_path, exist_ok=True)
+            shortcut_file = os.path.join(desktop_path, f"{app_id}.desktop")
+            app_details = next((a for a in self._catalog if a["id"] == app_id), None)
+            if app_details:
+                with open(shortcut_file, "w") as f:
+                    f.write("[Desktop Entry]\n")
+                    f.write(f"Name={app_details['name']}\n")
+                    f.write(f"Comment={app_details['desc']}\n")
+                    f.write(f"Exec=python3 /opt/agneax/{app_id}/main.py\n")
+                    f.write(f"Icon={app_id}\n")
+                    f.write("Type=Application\n")
+                    f.write(f"Categories={app_details['category']};\n")
+                os.chmod(shortcut_file, 0o755)
+                print(f"Generated desktop shortcut: {shortcut_file}")
+        except Exception as e:
+            print(f"Failed to generate desktop shortcut: {e}")
+
         self.installCompleted.emit(app_id, success)
 
     def _uninstall_worker(self, app_id):
@@ -78,6 +99,15 @@ class StoreBridge(QObject):
             if app["id"] == app_id:
                 app["installed"] = False
                 break
+
+        # Remove desktop shortcut
+        try:
+            shortcut_file = os.path.expanduser(f"~/Desktop/{app_id}.desktop")
+            if os.path.exists(shortcut_file):
+                os.remove(shortcut_file)
+                print(f"Removed desktop shortcut: {shortcut_file}")
+        except Exception as e:
+            print(f"Failed to delete desktop shortcut: {e}")
 
         self.installCompleted.emit(app_id, False)
 

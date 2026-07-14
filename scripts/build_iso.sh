@@ -33,6 +33,10 @@ mkdir -p "$ROOTFS"
 mkdir -p "$IMAGE/live"
 mkdir -p "$IMAGE/boot/grub"
 
+# Build Agneax Store debian package
+chmod +x scripts/package_store.sh
+./scripts/package_store.sh
+
 # Install base system using debootstrap
 echo "Debootstrapping minimal Debian system..."
 debootstrap --arch=amd64 bookworm "$ROOTFS" http://deb.debian.org/debian/
@@ -170,15 +174,18 @@ fi
 # Copy desktop and applications code
 mkdir -p "$ROOTFS/opt/agneax/desktop"
 mkdir -p "$ROOTFS/opt/agneax/control-center"
-mkdir -p "$ROOTFS/opt/agneax/store"
 mkdir -p "$ROOTFS/opt/agneax/installer"
 mkdir -p "$ROOTFS/opt/agneax/branding"
 
 cp -R desktop/* "$ROOTFS/opt/agneax/desktop/" || true
 cp -R control-center/* "$ROOTFS/opt/agneax/control-center/" || true
-cp -R store/* "$ROOTFS/opt/agneax/store/" || true
 cp -R installer/* "$ROOTFS/opt/agneax/installer/" || true
 cp -R branding/* "$ROOTFS/opt/agneax/branding/" || true
+
+# Install Agneax Store Debian Package (Step 7)
+cp "build/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
+chroot "$ROOTFS" dpkg -i /tmp/agneax-store_1.0.0_amd64.deb || true
+rm -f "$ROOTFS/tmp/agneax-store_1.0.0_amd64.deb"
 
 # Copy configs (lightdm, network, rules)
 cp -R configs/* "$ROOTFS/" || true
