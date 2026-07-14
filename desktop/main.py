@@ -9,8 +9,48 @@ from PySide6.QtCore import QObject, Slot, Signal, Property, QTimer
 from PySide6.QtWidgets import QApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
+class SettingsManager:
+    @staticmethod
+    def get_config_path():
+        path = os.path.expanduser("~/.config/agneax")
+        os.makedirs(path, exist_ok=True)
+        return os.path.join(path, "settings.json")
+
+    @staticmethod
+    def load_settings(category, default_settings):
+        config_file = SettingsManager.get_config_path()
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, "r") as f:
+                    data = json.load(f)
+                    if category in data:
+                        default_settings.update(data[category])
+            except Exception as e:
+                print(f"Error loading persistent settings: {e}")
+        return default_settings
+
+    @staticmethod
+    def save_settings(category, settings):
+        config_file = SettingsManager.get_config_path()
+        data = {}
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, "r") as f:
+                    data = json.load(f)
+            except Exception:
+                pass
+        data[category] = settings
+        try:
+            with open(config_file, "w") as f:
+                json.dump(data, f, indent=4)
+        except Exception as e:
+            print(f"Error saving settings: {e}")
+
 class SystemBridge(QObject):
     telemetryUpdated = Signal(str)
+    wallpaperPathChanged = Signal(str)
+    themeChanged = Signal(str)
+    accentColorChanged = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -61,6 +101,33 @@ class SystemBridge(QObject):
         # Start thread to read daemon telemetry
         self.telemetry_thread = threading.Thread(target=self._telemetry_worker, daemon=True)
         self.telemetry_thread.start()
+
+        # Persistent settings poller (Step 2)
+        self._appearance = SettingsManager.load_settings("appearance", {
+            "theme": "Dark Mode",
+            "accent_color": "#00F2FE",
+            "wallpaper": "Sleek Carbon Glass",
+        })
+        self._settings_mtime = 0
+        self._settings_timer = QTimer(self)
+        self._settings_timer.setInterval(1000)
+        self._settings_timer.timeout.connect(self._check_settings_update)
+        self._settings_timer.start()
+
+        # Trigger startup chime (Step 5)
+        if sys.platform != "win32":
+            threading.Thread(target=self._play_startup_sound, daemon=True).start()
+
+    def _play_startup_sound(self):
+        # Look for custom sound first
+        custom_sound = "/opt/agneax/branding/startup.wav"
+        if os.path.exists(custom_sound):
+            os.system(f"aplay {custom_sound} > /dev/null 2>&1")
+        else:
+            # Fallback to debian system sounds if available
+            system_sound = "/usr/share/sounds/alsa/Front_Center.wav"
+            if os.path.exists(system_sound):
+                os.system(f"aplay {system_sound} > /dev/null 2>&1")
 
     def _telemetry_worker(self):
         while self.running:
@@ -132,16 +199,69 @@ class SystemBridge(QObject):
         with self.lock:
             return json.dumps(self._telemetry)
 
-    @Property(str, constant=True)
+    def _check_settings_update(self):
+        config_file = SettingsManager.get_config_path()
+        if os.path.exists(config_file):
+            try:
+                mtime = os.path.getmtime(config_file)
+                if mtime > self._settings_mtime:
+                    self._settings_mtime = mtime
+                    # Reload settings
+                    self._appearance = SettingsManager.load_settings("appearance", {
+                        "theme": "Dark Mode",
+                        "accent_color": "#00F2FE",
+                        "wallpaper": "Sleek Carbon Glass",
+                    })
+                    # Emit signals to QML
+                    self.wallpaperPathChanged.emit(self.wallpaperPath)
+                    self.themeChanged.emit(self._appearance.get("theme", "Dark Mode"))
+                    self.accentColorChanged.emit(self._appearance.get("accent_color", "#00F2FE"))
+            except Exception as e:
+                print(f"Error checking settings updates: {e}")
+
+    @Property(str, notify=wallpaperPathChanged)
     def wallpaperPath(self):
-        opt_path = "/opt/agneax/branding/wallpaper.svg"
+        # Determine actual wallpaper file based on name
+        wp_name = self._appearance.get("wallpaper", "Sleek Carbon Glass")
+        
+        # Check if we have PNG/SVG wallpapers
+        opt_dir = "/opt/agneax/branding"
+        local_dir = os.path.join(os.path.dirname(__file__), "..", "branding")
+        
+        # Map wallpaper names to filenames
+        wp_files = {
+            "Sleek Carbon Glass": "wallpaper.png",
+            "Aurora Wave": "wallpaper.svg",
+            "Neon Horizon": "wallpaper.svg"
+        }
+        
+        filename = wp_files.get(wp_name, "wallpaper.png")
+        
+        # Check in opt first (inside live ISO)
+        opt_path = os.path.join(opt_dir, filename)
         if os.path.exists(opt_path):
             return "file://" + opt_path
-        # Return fallback path relative to main.py directory
-        local_path = os.path.join(os.path.dirname(__file__), "..", "branding", "wallpaper.svg")
-        # Replace backslashes with forward slashes for Windows URL compatibility
-        formatted_path = os.path.abspath(local_path).replace("\\", "/")
+            
+        # Check in local repository
+        local_path = os.path.join(local_dir, filename)
+        if os.path.exists(local_path):
+            formatted_path = os.path.abspath(local_path).replace("\\", "/")
+            return "file:///" + formatted_path
+            
+        # Hard fallback to wallpaper.svg if PNG does not exist yet
+        fallback_file = "wallpaper.svg"
+        if os.path.exists(os.path.join(opt_dir, fallback_file)):
+            return "file://" + os.path.join(opt_dir, fallback_file)
+        formatted_path = os.path.abspath(os.path.join(local_dir, fallback_file)).replace("\\", "/")
         return "file:///" + formatted_path
+
+    @Property(str, notify=themeChanged)
+    def theme(self):
+        return self._appearance.get("theme", "Dark Mode")
+
+    @Property(str, notify=accentColorChanged)
+    def accentColor(self):
+        return self._appearance.get("accent_color", "#00F2FE")
 
     # Exposed Window management layout calculators (utilizes C++ libraries or Python fallback)
     @Slot(int, int, int, int, int, int, result=str)

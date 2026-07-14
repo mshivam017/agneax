@@ -98,6 +98,9 @@ apt-get install -y --no-install-recommends \
   lightdm-gtk-greeter \
   dbus-user-session \
   policykit-1 \
+  plymouth \
+  plymouth-themes \
+  alsa-utils \
   python3 \
   python3-pip \
   qt6-wayland \
@@ -142,6 +145,16 @@ systemctl enable lightdm
 systemctl enable NetworkManager
 systemctl enable ufw
 systemctl set-default graphical.target
+
+# Configure initramfs tools to use zstd compression for faster boot (Step 1)
+if [ -f /etc/initramfs-tools/initramfs.conf ]; then
+  sed -i 's/COMPRESS=gzip/COMPRESS=zstd/g' /etc/initramfs-tools/initramfs.conf
+fi
+
+# Configure Plymouth default bootloader splash theme (Step 1)
+if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+  plymouth-set-default-theme -R spinner || true
+fi
 
 # Add agneax-core systemd service (Step 3)
 cat <<'LEOF' > /etc/systemd/system/agneax-core.service
@@ -255,6 +268,33 @@ echo "Packaging Agneax Store dynamically from current workspace sources..."
 chmod +x ./scripts/package_store.sh
 ./scripts/package_store.sh
 
+# Generate PNG wallpaper from SVG vector for GRUB background (Step 2)
+echo "Generating PNG wallpaper for bootloader background..."
+python3 -c '
+try:
+    from PySide6.QtGui import QPixmap, QPainter
+    from PySide6.QtSvg import QSvgRenderer
+    from PySide6.QtCore import QSize
+    renderer = QSvgRenderer("branding/wallpaper.svg")
+    pixmap = QPixmap(QSize(1920, 1080))
+    pixmap.fill()
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    pixmap.save("build/wallpaper.png")
+    print("PNG wallpaper generated successfully.")
+except Exception as e:
+    print(f"Warning: Failed to generate PNG wallpaper using PySide6: {e}")
+' || true
+
+# Copy generated PNG wallpaper to image and rootfs
+if [ -f "build/wallpaper.png" ]; then
+  mkdir -p "$IMAGE/boot/grub"
+  cp "build/wallpaper.png" "$IMAGE/boot/grub/wallpaper.png"
+  mkdir -p "$ROOTFS/opt/agneax/branding"
+  cp "build/wallpaper.png" "$ROOTFS/opt/agneax/branding/wallpaper.png"
+fi
+
 # Install Agneax Store Debian Package (Step 7)
 cp "build/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
 chroot "$ROOTFS" dpkg -i /tmp/agneax-store_1.0.0_amd64.deb || true
@@ -303,6 +343,11 @@ insmod ext2
 insmod fat
 insmod iso9660
 insmod all_video
+insmod png
+
+background_image /boot/grub/wallpaper.png
+set menu_color_normal=cyan/black
+set menu_color_highlight=black/cyan
 
 menuentry "Agneax OS Live (Standard Mode)" {
     search --set=root --file /live/vmlinuz

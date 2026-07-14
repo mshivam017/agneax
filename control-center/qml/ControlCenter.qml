@@ -26,6 +26,7 @@ ApplicationWindow {
     property var appearance: JSON.parse(settingsBridge.getAppearanceSettings())
     property var network: JSON.parse(settingsBridge.getNetworkSettings())
     property var firewall: JSON.parse(settingsBridge.getFirewallSettings())
+    property var systemSpecs: JSON.parse(settingsBridge.getSystemSpecs())
 
     Connections {
         target: settingsBridge
@@ -194,19 +195,19 @@ ApplicationWindow {
                                 columnSpacing: 40
 
                                 Text { text: "OS Name"; color: ccWindow.textSecondaryColor; font.pixelSize: 11 }
-                                Text { text: "Agneax OS 1.0.0 LTS (Debian Core)"; color: ccWindow.textPrimaryColor; font.bold: true; font.pixelSize: 11 }
+                                Text { text: ccWindow.systemSpecs.os; color: ccWindow.textPrimaryColor; font.bold: true; font.pixelSize: 11 }
 
                                 Text { text: "Kernel Version"; color: ccWindow.textSecondaryColor; font.pixelSize: 11 }
-                                Text { text: "Linux 6.1.0-21-amd64"; color: ccWindow.textPrimaryColor; font.pixelSize: 11 }
+                                Text { text: ccWindow.systemSpecs.kernel; color: ccWindow.textPrimaryColor; font.pixelSize: 11 }
 
                                 Text { text: "Windowing System"; color: ccWindow.textSecondaryColor; font.pixelSize: 11 }
                                 Text { text: "Wayland (Weston Compositor)"; color: ccWindow.textPrimaryColor; font.pixelSize: 11 }
 
                                 Text { text: "Processor (CPU)"; color: ccWindow.textSecondaryColor; font.pixelSize: 11 }
-                                Text { text: "Intel® Core™ i7 / AMD Ryzen™ (x86_64)"; color: ccWindow.textPrimaryColor; font.pixelSize: 11 }
+                                Text { text: ccWindow.systemSpecs.cpu; color: ccWindow.textPrimaryColor; font.pixelSize: 11; elide: Text.ElideRight; Layout.preferredWidth: 280 }
 
                                 Text { text: "Total RAM"; color: ccWindow.textSecondaryColor; font.pixelSize: 11 }
-                                Text { text: "8.0 GB Physical Memory"; color: ccWindow.textPrimaryColor; font.pixelSize: 11 }
+                                Text { text: ccWindow.systemSpecs.ram; color: ccWindow.textPrimaryColor; font.pixelSize: 11 }
 
                                 Text { text: "Hardware Support"; color: ccWindow.textSecondaryColor; font.pixelSize: 11 }
                                 Text { text: "Intel, AMD, NVIDIA, UEFI, VBox, VMware"; color: ccWindow.textPrimaryColor; font.pixelSize: 11 }
@@ -282,6 +283,47 @@ ApplicationWindow {
                                 AccentCircle { colorCode: "#FF5E62"; selected: ccWindow.appearance.accent_color == "#FF5E62"; onClicked: settingsBridge.saveAppearance("accent_color", "#FF5E62") }
                                 AccentCircle { colorCode: "#B06AB3"; selected: ccWindow.appearance.accent_color == "#B06AB3"; onClicked: settingsBridge.saveAppearance("accent_color", "#B06AB3") }
                                 AccentCircle { colorCode: "#11998E"; selected: ccWindow.appearance.accent_color == "#11998E"; onClicked: settingsBridge.saveAppearance("accent_color", "#11998E") }
+                            }
+                        }
+                    }
+
+                    // System Wallpaper Selector Card (Task 3)
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 180
+                        color: ccWindow.cardBgColor
+                        radius: 12
+                        border.color: ccWindow.borderColor
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 18
+                            spacing: 10
+
+                            Text { text: "Select Desktop Wallpaper"; font.bold: true; font.pixelSize: 12; color: ccWindow.textPrimaryColor }
+
+                            RowLayout {
+                                spacing: 14
+                                Layout.fillWidth: true
+
+                                // Sleek Carbon Glass
+                                Rectangle {
+                                    width: 140; height: 90; radius: 6; color: "#252B3C"; border.color: ccWindow.appearance.wallpaper == "Sleek Carbon Glass" ? ccWindow.activeAccentColor : ccWindow.borderColor; border.width: ccWindow.appearance.wallpaper == "Sleek Carbon Glass" ? 2 : 1
+                                    Text { anchors.centerIn: parent; text: "Carbon Glass"; font.pixelSize: 11; font.bold: true; color: "#FFFFFF" }
+                                    MouseArea { anchors.fill: parent; onClicked: settingsBridge.saveAppearance("wallpaper", "Sleek Carbon Glass") }
+                                }
+                                // Aurora Wave
+                                Rectangle {
+                                    width: 140; height: 90; radius: 6; color: "#1B3B32"; border.color: ccWindow.appearance.wallpaper == "Aurora Wave" ? ccWindow.activeAccentColor : ccWindow.borderColor; border.width: ccWindow.appearance.wallpaper == "Aurora Wave" ? 2 : 1
+                                    Text { anchors.centerIn: parent; text: "Aurora Wave"; font.pixelSize: 11; font.bold: true; color: "#FFFFFF" }
+                                    MouseArea { anchors.fill: parent; onClicked: settingsBridge.saveAppearance("wallpaper", "Aurora Wave") }
+                                }
+                                // Neon Horizon
+                                Rectangle {
+                                    width: 140; height: 90; radius: 6; color: "#4A2E35"; border.color: ccWindow.appearance.wallpaper == "Neon Horizon" ? ccWindow.activeAccentColor : ccWindow.borderColor; border.width: ccWindow.appearance.wallpaper == "Neon Horizon" ? 2 : 1
+                                    Text { anchors.centerIn: parent; text: "Neon Horizon"; font.pixelSize: 11; font.bold: true; color: "#FFFFFF" }
+                                    MouseArea { anchors.fill: parent; onClicked: settingsBridge.saveAppearance("wallpaper", "Neon Horizon") }
+                                }
                             }
                         }
                     }

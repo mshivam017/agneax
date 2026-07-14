@@ -11,9 +11,9 @@ ApplicationWindow {
     title: "Agneax Desktop"
     flags: Qt.FramelessWindowHint | Qt.Window | Qt.MaximizeUsingFullscreenGeometryHint
 
-    // App state management
-    property bool isDarkMode: true
-    property string accentColor: "#00F2FE" // Bright Neon Blue-Teal
+    // App state management (bound to persistent SystemBridge settings)
+    property bool isDarkMode: systemBridge.theme === "Dark Mode"
+    property string accentColor: systemBridge.accentColor
     property string glassBgColor: isDarkMode ? "rgba(20, 24, 33, 0.75)" : "rgba(255, 255, 255, 0.75)"
     property string textPrimaryColor: isDarkMode ? "#FFFFFF" : "#1A202C"
     property string textSecondaryColor: isDarkMode ? "#A0AEC0" : "#718096"
