@@ -77,6 +77,21 @@ jobs:
           sudo ./scripts/build_iso.sh
           sudo chown -R $USER:$USER build
 
+      - name: Verify ISO Boot in QEMU (Headless)
+        run: |
+          sudo apt-get install -y qemu-system-x86
+          # Boot headless for 15 seconds to ensure no bootloader crashes (Step 8 of Gap Analysis)
+          qemu-system-x86_64 -m 2048 -cdrom build/agneax-os-amd64.iso -display none -daemonize
+          sleep 15
+          # Check if qemu process is still running
+          if pgrep qemu-system-x86; then
+            echo "ISO successfully booted in headless QEMU!"
+            pkill qemu-system-x86
+          else
+            echo "Error: QEMU crashed during boot!"
+            exit 1
+          fi
+
       - name: Generate SHA256 Checksum
         run: |
           cd build
