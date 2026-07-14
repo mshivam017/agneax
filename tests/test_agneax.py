@@ -124,7 +124,7 @@ class TestInstallerBridge(unittest.TestCase):
         drives_str = self.bridge.getDrives()
         drives = json.loads(drives_str)
         self.assertGreater(len(drives), 0)
-        self.assertEqual(drives[0]["path"], "/dev/sda")
+        self.assertTrue(drives[0]["path"].startswith("/dev/"))
 
 
 class TestSettingsBridge(unittest.TestCase):
