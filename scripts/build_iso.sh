@@ -33,10 +33,6 @@ mkdir -p "$ROOTFS"
 mkdir -p "$IMAGE/live"
 mkdir -p "$IMAGE/boot/grub"
 
-# Build Agneax Store debian package
-chmod +x scripts/package_store.sh
-./scripts/package_store.sh
-
 # Install base system using debootstrap
 echo "Debootstrapping minimal Debian system..."
 debootstrap --arch=amd64 bookworm "$ROOTFS" http://deb.debian.org/debian/
@@ -183,7 +179,7 @@ cp -R installer/* "$ROOTFS/opt/agneax/installer/" || true
 cp -R branding/* "$ROOTFS/opt/agneax/branding/" || true
 
 # Install Agneax Store Debian Package (Step 7)
-cp "build/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
+cp "packages/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
 chroot "$ROOTFS" dpkg -i /tmp/agneax-store_1.0.0_amd64.deb || true
 rm -f "$ROOTFS/tmp/agneax-store_1.0.0_amd64.deb"
 
