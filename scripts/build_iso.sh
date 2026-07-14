@@ -236,37 +236,9 @@ menuentry "Agneax OS (Safe Graphics Mode)" {
 }
 EOF
 
-# Create BIOS and EFI bootable structures
-echo "Generating bootable hybrid ISO..."
-grub-mkstandalone \
-  --directory="/usr/lib/grub/x86_64-efi" \
-  --format="x86_64-efi" \
-  --output="$WORKDIR/efi.img" \
-  --install-modules="part_gpt part_msdos fat iso9660 loopback normal configfile test" \
-  "/boot/grub/grub.cfg=$IMAGE/boot/grub/grub.cfg"
-
-# Create a minimal EFI boot disk image (FAT16 formatted)
-dd if=/dev/zero of="$WORKDIR/efiboot.img" bs=1M count=4
-mkfs.vfat "$WORKDIR/efiboot.img"
-mmd -i "$WORKDIR/efiboot.img" ::/EFI
-mmd -i "$WORKDIR/efiboot.img" ::/EFI/BOOT
-mcopy -i "$WORKDIR/efiboot.img" "$WORKDIR/efi.img" ::/EFI/BOOT/BOOTX64.EFI
-
-cp "$WORKDIR/efiboot.img" "$IMAGE/boot/efiboot.img"
-
-# Final ISO Generation using xorriso
-xorriso -as mkisofs \
-  -iso-level 3 \
-  -full-iso9660-filenames \
-  -volid "AGNEAX_OS" \
-  -eltorito-boot boot/grub/efi.img \
-  -no-emul-boot \
-  -eltorito-alt-boot \
-  -e boot/efiboot.img \
-  -no-emul-boot \
-  -isohybrid-gpt-basdat \
-  -output "$ISO_OUT/agneax-os-amd64.iso" \
-  "$IMAGE"
+# Create BIOS and EFI bootable hybrid ISO
+echo "Generating bootable hybrid ISO with grub-mkrescue..."
+grub-mkrescue -o "$ISO_OUT/agneax-os-amd64.iso" "$IMAGE"
 
 echo "=== Agneax OS ISO Build Complete! ==="
 echo "Output path: $ISO_OUT/agneax-os-amd64.iso"
