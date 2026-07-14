@@ -90,13 +90,29 @@ class TestStoreBridge(unittest.TestCase):
         # Test that installApp worker creates a desktop shortcut and uninstallApp deletes it (Step 3)
         self.bridge.installApp("firefox")
         import time
-        time.sleep(5.0) # Wait for install threads loop and socket timeouts
         shortcut = os.path.expanduser("~/Desktop/firefox.desktop")
-        # In headless test environments ~/Desktop might be created
-        self.assertTrue(os.path.exists(shortcut) or not os.path.exists(os.path.expanduser("~/Desktop")))
+        
+        # Poll up to 10 seconds for the shortcut file to be created (prevents VM runner lag)
+        created = False
+        for _ in range(100):
+            if os.path.exists(shortcut):
+                created = True
+                break
+            time.sleep(0.1)
+            
+        self.assertTrue(created or not os.path.exists(os.path.expanduser("~/Desktop")))
+        
         self.bridge.uninstallApp("firefox")
-        time.sleep(4.0)
-        self.assertFalse(os.path.exists(shortcut))
+        
+        # Poll up to 10 seconds for the shortcut file to be deleted
+        deleted = False
+        for _ in range(100):
+            if not os.path.exists(shortcut):
+                deleted = True
+                break
+            time.sleep(0.1)
+            
+        self.assertTrue(deleted)
 
 
 class TestInstallerBridge(unittest.TestCase):
