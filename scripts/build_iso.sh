@@ -95,6 +95,9 @@ apt-get install -y --no-install-recommends \
   weston \
   xwayland \
   lightdm \
+  lightdm-gtk-greeter \
+  dbus-user-session \
+  policykit-1 \
   python3 \
   python3-pip \
   qt6-wayland \
@@ -138,6 +141,7 @@ echo "agneax ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 systemctl enable lightdm
 systemctl enable NetworkManager
 systemctl enable ufw
+systemctl set-default graphical.target
 
 # Add agneax-core systemd service (Step 3)
 cat <<'LEOF' > /etc/systemd/system/agneax-core.service
@@ -168,6 +172,8 @@ cat <<'LEOF' > /etc/lightdm/lightdm.conf.d/agneax.conf
 autologin-user=agneax
 autologin-user-timeout=0
 user-session=agneax-wayland
+autologin-session=agneax-wayland
+greeter-session=lightdm-gtk-greeter
 LEOF
 
 mkdir -p /usr/share/wayland-sessions
@@ -183,9 +189,21 @@ LEOF
 cat <<'LEOF' > /usr/bin/agneax-session-start
 #!/usr/bin/env bash
 # Start Weston compositor in fullscreen mode and autostart Agneax Shell
+set -u
+
 export QT_QPA_PLATFORM=wayland
 export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
-weston --backend=drm --shell=kiosk-shell.so --continue-without-input --log=/tmp/weston.log --startup-cmd="/opt/agneax/desktop/run.sh"
+
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+
+exec dbus-run-session -- weston \
+  --backend=drm \
+  --shell=kiosk-shell.so \
+  --continue-without-input \
+  --log=/tmp/weston.log \
+  --startup-cmd="/opt/agneax/desktop/run.sh"
 LEOF
 chmod +x /usr/bin/agneax-session-start
 

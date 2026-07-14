@@ -1,0 +1,262 @@
+AGNEAX OS TTY LOGIN INSTEAD OF DESKTOP - SOLUTION AND PROMPT
+Date: 2026-07-14
+Repository: D:\myprojects\Github
+Screenshot issue: VirtualBox shows "Debian GNU/Linux 12 agneax-os tty1" login instead of Agneax Desktop.
+
+WHAT THE SCREENSHOT MEANS
+
+The ISO is booting successfully into Debian/Linux.
+This is not a kernel panic and not a dead ISO.
+
+The problem is after boot:
+
+systemd -> LightDM -> Agneax Wayland session -> Weston -> PySide6 desktop
+
+That graphical chain is not reaching the desktop, so the system leaves you at tty1 console login.
+
+Current login from the ISO should be:
+
+Username: agneax
+Password: agneax
+
+If you selected "Agneax OS Debug Console" in GRUB, this tty1 screen is expected.
+If you selected "Agneax OS Live (Standard Mode)" and still got tty1, LightDM or the Weston session failed.
+
+LIKELY ROOT CAUSES
+
+1. LightDM was installed without a greeter
+- build_iso.sh uses --no-install-recommends.
+- lightdm can be installed without lightdm-gtk-greeter.
+- If no greeter/session startup path is available, graphical login may fail.
+
+2. Default target may not be graphical.target
+- The OS can boot to multi-user console if graphical target is not set correctly.
+
+3. Agneax Wayland session may not launch correctly
+- /usr/bin/agneax-session-start starts Weston.
+- Weston needs a valid runtime directory and DBus session.
+- Without XDG_RUNTIME_DIR/DBus, Weston can fail or exit.
+
+4. VirtualBox graphics can fail with Weston DRM
+- Weston --backend=drm is sensitive to VM graphics settings.
+- Use VMSVGA, 128 MB video memory, and test 3D acceleration ON/OFF.
+
+5. If desktop crashes after Weston starts
+- Logs should be checked:
+  - /tmp/weston.log
+  - /tmp/agneax-desktop.log
+
+FIXES APPLIED IN REPOSITORY
+
+Files changed:
+- scripts/build_iso.sh
+- configs/etc/lightdm/lightdm.conf
+- configs/etc/lightdm/lightdm.conf.d/agneax.conf
+- configs/usr/bin/agneax-session-start
+
+Changes made:
+
+1. Added LightDM greeter and session support packages
+
+In scripts/build_iso.sh:
+- lightdm-gtk-greeter
+- dbus-user-session
+- policykit-1
+
+2. Forced graphical boot target
+
+In scripts/build_iso.sh:
+
+systemctl set-default graphical.target
+
+3. Fixed LightDM autologin session
+
+LightDM config now includes:
+
+[Seat:*]
+user-session=agneax-wayland
+autologin-user=agneax
+autologin-user-timeout=0
+autologin-session=agneax-wayland
+greeter-session=lightdm-gtk-greeter
+autologin-in-background=false
+
+4. Made Weston startup more robust
+
+/usr/bin/agneax-session-start now:
+- sets QT Wayland variables
+- creates XDG_RUNTIME_DIR if missing
+- sets permission 700 on runtime dir
+- starts Weston inside dbus-run-session
+- writes Weston log to /tmp/weston.log
+- starts Agneax desktop through /opt/agneax/desktop/run.sh
+
+5. Kept debug logs
+
+Desktop startup logs should go to:
+
+/tmp/agneax-desktop.log
+
+Weston logs should go to:
+
+/tmp/weston.log
+
+WHAT TO DO NOW
+
+Rebuild the ISO. The old ISO will not contain these fixes.
+
+On Linux/WSL2/Ubuntu build environment:
+
+sudo ./scripts/install_deps.sh
+
+cd packages/agneax-core
+cargo build --release
+cd ../..
+
+mkdir -p desktop/cpp_src/build
+cd desktop/cpp_src/build
+cmake ..
+make
+cd ../../..
+
+sudo ./scripts/build_iso.sh
+
+Then boot this file in VirtualBox:
+
+build/agneax-os-amd64.iso
+
+VIRTUALBOX SETTINGS TO USE
+
+Recommended:
+- Type: Linux
+- Version: Debian 12 64-bit
+- RAM: 4096 MB minimum
+- CPU: 2 cores minimum
+- Graphics Controller: VMSVGA
+- Video Memory: 128 MB
+- Enable 3D Acceleration: try ON first
+- If blank screen remains: try 3D Acceleration OFF
+- Boot order: Optical first
+- EFI: OFF first, unless you specifically want UEFI testing
+
+IF YOU STILL GET TTY1
+
+Login:
+
+username: agneax
+password: agneax
+
+Run:
+
+systemctl get-default
+systemctl status lightdm --no-pager
+journalctl -b -u lightdm --no-pager
+cat /tmp/weston.log
+cat /tmp/agneax-desktop.log
+ls -l /usr/share/wayland-sessions/
+cat /usr/share/wayland-sessions/agneax-wayland.desktop
+cat /usr/bin/agneax-session-start
+
+Try starting the graphical service manually:
+
+sudo systemctl set-default graphical.target
+sudo systemctl restart lightdm
+
+If LightDM starts but desktop is blank, test manually:
+
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+cd /opt/agneax/desktop
+python3 main.py
+
+If PySide6 fails:
+
+python3 -c "import PySide6; print(PySide6.__version__)"
+python3 -c "from PySide6.QtQml import QQmlApplicationEngine; print('QML OK')"
+
+IF YOU WANT A TEMPORARY MANUAL START FROM TTY
+
+After login:
+
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+dbus-run-session -- weston --backend=drm --shell=kiosk-shell.so --continue-without-input --log=/tmp/weston.log --startup-cmd="/opt/agneax/desktop/run.sh"
+
+If this works, the problem is LightDM startup.
+If this fails, read /tmp/weston.log.
+
+DETAILED PROMPT FOR AI/CODEX
+
+Use this prompt:
+
+"Fix Agneax OS ISO booting to tty1 login instead of launching the graphical desktop in VirtualBox.
+
+Observed screenshot:
+- VirtualBox window shows: Debian GNU/Linux 12 agneax-os tty1
+- Login prompt appears.
+- Kernel/network messages appear on the console.
+- Agneax Desktop, LightDM greeter, Weston shell, taskbar, and QML UI do not appear.
+
+Interpretation:
+- Kernel and live system boot are working.
+- Failure is in the graphical startup path:
+  systemd -> LightDM -> agneax-wayland session -> /usr/bin/agneax-session-start -> Weston DRM backend -> /opt/agneax/desktop/run.sh -> python3 desktop/main.py -> QML DesktopShell.
+
+Inspect and patch:
+- scripts/build_iso.sh
+- configs/etc/lightdm/lightdm.conf
+- configs/etc/lightdm/lightdm.conf.d/agneax.conf
+- configs/usr/share/wayland-sessions/agneax-wayland.desktop
+- configs/usr/bin/agneax-session-start
+- desktop/main.py
+- desktop/qml/DesktopShell.qml
+- docs/build.md
+
+Required fixes:
+1. Ensure the ISO installs lightdm-gtk-greeter even with --no-install-recommends.
+2. Ensure dbus-user-session and policykit support are installed.
+3. Ensure systemctl set-default graphical.target is called in the chroot.
+4. Configure LightDM autologin:
+   - autologin-user=agneax
+   - autologin-user-timeout=0
+   - user-session=agneax-wayland
+   - autologin-session=agneax-wayland
+   - greeter-session=lightdm-gtk-greeter
+5. Make /usr/bin/agneax-session-start robust:
+   - set QT_QPA_PLATFORM=wayland
+   - set QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+   - create XDG_RUNTIME_DIR when missing
+   - chmod 700 XDG_RUNTIME_DIR
+   - use dbus-run-session
+   - start weston with --backend=drm, --shell=kiosk-shell.so, --log=/tmp/weston.log
+   - start /opt/agneax/desktop/run.sh
+6. Ensure /opt/agneax/desktop/run.sh logs python output to /tmp/agneax-desktop.log.
+7. Keep a Debug Console GRUB entry, but make the default boot entry graphical.
+8. Add docs explaining VirtualBox settings:
+   - Debian 12 64-bit
+   - VMSVGA
+   - 128 MB video memory
+   - try 3D acceleration ON and OFF
+   - EFI OFF first
+9. Add troubleshooting commands:
+   - systemctl status lightdm --no-pager
+   - journalctl -b -u lightdm --no-pager
+   - cat /tmp/weston.log
+   - cat /tmp/agneax-desktop.log
+   - python3 -c 'import PySide6; print(PySide6.__version__)'
+10. Rebuild the ISO and test in VirtualBox and QEMU.
+
+Expected result:
+- Normal boot should autologin as agneax.
+- LightDM should start agneax-wayland session.
+- Weston should start.
+- Agneax PySide6/QML desktop should appear instead of tty1.
+- If graphical startup fails, logs should clearly show whether LightDM, Weston, or Python/QML failed."
+
+FINAL NOTE
+
+The screenshot is progress: the ISO reaches a real Linux login.
+The remaining work is graphical session startup reliability.
+Rebuild the ISO after the repo fixes; testing the old ISO will show the same tty1 behavior.
+

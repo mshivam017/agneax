@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # Start Weston compositor in fullscreen mode and autostart Agneax Shell
 # Optimized for Wayland display rendering
+set -u
 
 export QT_QPA_PLATFORM=wayland
 export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
 
-weston --backend=drm \
-       --shell=kiosk-shell.so \
-       --continue-without-input \
-       --log=/tmp/weston.log \
-       --startup-cmd="/opt/agneax/desktop/run.sh"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+
+exec dbus-run-session -- weston \
+  --backend=drm \
+  --shell=kiosk-shell.so \
+  --continue-without-input \
+  --log=/tmp/weston.log \
+  --startup-cmd="/opt/agneax/desktop/run.sh"
