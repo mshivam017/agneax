@@ -83,6 +83,18 @@ apt-get install -y --no-install-recommends \
   systemd-sysv \
   dbus
 
+# Install hardware drivers and firmware for GPU, WiFi, and Bluetooth (Intel, AMD, NVIDIA, VMs)
+apt-get install -y --no-install-recommends \
+  firmware-linux \
+  firmware-linux-free \
+  firmware-linux-nonfree \
+  firmware-iwlwifi \
+  firmware-realtek \
+  firmware-atheros \
+  xserver-xorg-video-all \
+  va-driver-all \
+  vdpau-driver-all
+
 # Install network tools
 apt-get install -y --no-install-recommends \
   network-manager \
