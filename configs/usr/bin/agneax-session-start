@@ -11,7 +11,7 @@ mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 
 exec dbus-run-session -- weston \
-  --backend=drm \
+  --backend=drm-backend.so \
   --shell=kiosk-shell.so \
   --continue-without-input \
   --log=/tmp/weston.log \
