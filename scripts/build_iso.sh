@@ -321,6 +321,7 @@ cat <<'EOF' > "$ROOTFS/opt/agneax/desktop/run.sh"
 # Startup script for Agneax Desktop environment inside Weston
 export QT_QPA_PLATFORM=wayland
 export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+export QSG_RENDER_LOOP=threaded
 cd /opt/agneax/desktop
 python3 main.py >> /tmp/agneax-desktop.log 2>&1
 EOF
@@ -343,7 +344,7 @@ umount -lf "$ROOTFS/dev"
 
 # Build SquashFS image
 echo "Creating filesystem.squashfs (this may take a few minutes)..."
-mksquashfs "$ROOTFS" "$IMAGE/live/filesystem.squashfs" -comp xz -e boot
+mksquashfs "$ROOTFS" "$IMAGE/live/filesystem.squashfs" -comp zstd -b 1M -e boot
 
 # Create GRUB boot configuration
 echo "Configuring bootloader (GRUB)..."

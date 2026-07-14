@@ -9,3 +9,8 @@ add_library(compositor_helper SHARED compositor_helper.cpp)
 
 # Enable positioning code for shared library
 set_target_properties(compositor_helper PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# Add compiler optimization flags for system math helper
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(compositor_helper PRIVATE -O3 -ffast-math)
+endif()
