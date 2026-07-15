@@ -3,6 +3,9 @@ set -e
 
 echo "=== Packaging Custom Branded Plymouth for Agneax OS ==="
 
+# Save current workspace root folder
+WORKSPACE_ROOT="$PWD"
+
 # Define directories
 BUILD_ROOT="build"
 PKG_DIR="$BUILD_ROOT/package_plymouth"
@@ -51,7 +54,7 @@ meson setup build \
 
 echo "Compiling with ninja..."
 ninja -C build
-cd ..
+cd "$WORKSPACE_ROOT"
 
 # 4. Install compiled binaries into Debian package staging folder
 echo "Staging Plymouth binaries for packaging..."
