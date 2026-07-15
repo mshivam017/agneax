@@ -6,7 +6,7 @@ echo "=== Packaging Custom Branded Plymouth for Agneax OS ==="
 # Define directories
 BUILD_ROOT="build"
 PKG_DIR="$BUILD_ROOT/package_plymouth"
-SRC_CACHE="plymouth-src"
+SRC_CACHE="packages/agneax-plymouth"
 OUT_DEB="$BUILD_ROOT/agneax-plymouth_1.0.0_amd64.deb"
 
 # Clean up past build files

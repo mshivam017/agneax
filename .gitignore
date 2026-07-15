@@ -30,4 +30,4 @@ Thumbs.db
 /download-iso.txt
 
 # Plymouth build artifacts
-/plymouth-src/build/
+/packages/agneax-plymouth/build/
