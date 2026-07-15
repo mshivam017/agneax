@@ -180,11 +180,25 @@ if command -v plymouth-set-default-theme >/dev/null 2>&1; then
   plymouth-set-default-theme -R spinner || true
 fi
 
-# Center Plymouth watermark boot logo (Phase 3)
+# Overwrite Plymouth spinner theme configurations with explicit Watermark logo mappings
 PLYMOUTH_SPINNER_CONF="/usr/share/plymouth/themes/spinner/spinner.plymouth"
 if [ -f "$PLYMOUTH_SPINNER_CONF" ]; then
-  sed -i 's/WatermarkHorizontalAlignment=.*/WatermarkHorizontalAlignment=0.5/g' "$PLYMOUTH_SPINNER_CONF"
-  sed -i 's/WatermarkVerticalAlignment=.*/WatermarkVerticalAlignment=0.42/g' "$PLYMOUTH_SPINNER_CONF"
+  cat <<'EOF' > "$PLYMOUTH_SPINNER_CONF"
+[Plymouth Theme]
+Name=Spinner
+Description=A theme that features a simple spinner on a dark background.
+ModuleName=two-step
+
+[two-step]
+ImageDir=/usr/share/plymouth/themes/spinner
+HorizontalAlignment=0.5
+VerticalAlignment=0.5
+Transition=fade
+TransitionDuration=0.5
+Watermark=watermark
+WatermarkHorizontalAlignment=0.5
+WatermarkVerticalAlignment=0.42
+EOF
 fi
 
 # Configure Plymouth status text styling (Phase 4)
@@ -384,21 +398,21 @@ try:
     print("PNG wallpaper generated successfully.")
     
     # Render Text-based Boot Logo ("Agnea" in white, "X" in orange)
-    pixmap_logo = QPixmap(QSize(1024, 256))
+    pixmap_logo = QPixmap(QSize(380, 96))
     pixmap_logo.fill(Qt.transparent)
     painter_logo = QPainter(pixmap_logo)
     painter_logo.setRenderHint(QPainter.Antialiasing)
     painter_logo.setRenderHint(QPainter.TextAntialiasing)
     
-    font = QFont("Sans-Serif", 84, QFont.Bold)
+    font = QFont("Sans-Serif", 36, QFont.Bold)
     painter_logo.setFont(font)
     
     fm = painter_logo.fontMetrics()
     w_agnea = fm.horizontalAdvance("Agnea")
     w_x = fm.horizontalAdvance("X")
     total_w = w_agnea + w_x
-    start_x = (1024 - total_w) // 2
-    baseline_y = 128 + (fm.ascent() - fm.descent()) // 2
+    start_x = (380 - total_w) // 2
+    baseline_y = 48 + (fm.ascent() - fm.descent()) // 2
     
     # Draw "Agnea" in White
     painter_logo.setPen(QColor("#FFFFFF"))
@@ -477,12 +491,9 @@ export QT_ENABLE_HIGHDPI_SCALING=1
 export QMNG_FORCE_DOUBLE_BUFFER=1
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 
-# GPU Texture Atlasing & Mesa OpenGL overrides (Component 4)
-export QSG_RENDERER_BACKEND=opengl
+# GPU Texture Atlasing (Component 4 - Performance Caching)
 export QSG_ATLAS_WIDTH=2048
 export QSG_ATLAS_HEIGHT=2048
-export MESA_GL_VERSION_OVERRIDE=4.5
-export MESA_GLSL_VERSION_OVERRIDE=450
 
 # X11 Shared-Memory Fallback parameters (Component 5)
 export QT_X11_NO_MITSHM=1
