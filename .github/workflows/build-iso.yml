@@ -58,7 +58,8 @@ jobs:
             libpng-dev \
             libpango1.0-dev \
             libcairo2-dev \
-            libudev-dev
+            libudev-dev \
+            libevdev-dev
 
       - name: Build Rust System Daemon (agneax-core)
         run: |
