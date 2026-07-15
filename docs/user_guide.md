@@ -6,51 +6,51 @@ This guide provides instructions on installing and navigating the Agneax OS desk
 
 ---
 
-## 1. Booting the Live Media
+## 1. Booting the Live Media & Onboarding Wizard
 
-When you boot from the Agneax OS USB drive, the GRUB menu will present two choices:
-1. **Agneax OS Live (Standard Mode)**: Recommended. Uses default hardware graphics acceleration.
+When you boot from the Agneax OS live media, the GRUB menu will present options:
+1. **Agneax OS Live (Standard Mode)**: Recommended. Uses default hardware graphics acceleration with ultra-fast multithreaded SquashFS decompression and silent boot screen transitions.
 2. **Agneax OS (Safe Graphics Mode)**: Troubleshooting mode if your GPU rendering fails. Falls back to software rendering options.
 
-Once loaded, you will automatically log in to the live desktop environment without requiring a password.
+Once loaded, the **Onboarding Wizard** will appear automatically:
+- **Try Agneax OS**: Closes the welcome dialog, letting you test the system in live memory without changing your computer.
+- **Install Agneax OS**: Launches the disk partitioning wizard to begin permanent installation immediately.
 
 ---
 
-## 2. System Installation
-
-To install Agneax OS permanently on your drive:
-1. Double-click the **Install Agneax** desktop shortcut icon on the desktop screen.
-2. **Language & Keyboard**: Select your locale and language options.
-3. **Partitioning**: Choose your target storage drive. The installer will format and prepare automatic EFI partitions (`/dev/sda1` FAT32) and the root partition (`/dev/sda2` ext4).
-4. **User Details**: Input your administrator account name and system password.
-5. **Install**: Click "Install Now". The squashfs file extraction will begin.
-6. **Reboot**: Click "Reboot Now" to reboot into your clean, native Agneax OS system.
+## 2. Keyboard Shortcuts (Hotkeys)
+Navigate the desktop shell instantly using built-in system hotkeys:
+- **`Super` (Windows Key)**: Toggle the Applications Start Menu.
+- **`Ctrl + Alt + T`**: Launch the GPU-accelerated Terminal Emulator.
+- **`Super + W`**: Slide out the Widgets Dashboard tray.
+- **`Super + D`**: Clear the desktop (minimize all windows) or restore them.
 
 ---
 
-## 3. Desktop Environment Navigation
-
-Agneax OS runs **Agneax Desktop** built on Wayland protocol.
-
-- **Start Menu (Λ icon)**: Located on the bottom left. Click it to view installed applications, search files, check profiles, lock screens, reboot, or shut down.
-- **Quick Settings (⚙️ icon)**: Located on the bottom right. Toggle Wi-Fi, Bluetooth, Dark Mode, and Firewall rule cards. Drag volume and screen brightness sliders. Monitor system metrics (CPU, memory, temperature, uptime).
-- **Desktop Shortcuts**: Drag and launch shortcuts on the grid.
-- **Window Snapping**: Move windows to screen edges to snap them to halves or quarters.
+## 3. Desktop Widgets Dashboard
+Press `Super + W` to toggle the sliding **Widgets Dashboard**:
+- **Clock & Calendar**: Large, premium digital clock and calendar widget.
+- **Telemetry Graph Monitors**: Visual CPU and Memory utilization progress trackers.
+- **Sticky Notes**: A persistent, autosaved notepad for writing quick developer notes.
 
 ---
 
-## 4. Agneax App Store
-Open the **App Store** to manage software:
-- Select categories (Developer, Graphics, Gaming, Internet) to filter software.
-- Click **Install** to download and configure applications (VS Code, Steam, Firefox, Discord, GIMP).
-- Integrates both standard Debian APT packages and modern sandbox Flatpak packages.
+## 4. Desktop Environment Navigation
+
+Agneax OS runs a custom shell with dynamic taskbar layout modes:
+- **Start Menu**: Click search to filter apps. Press `Enter` to autostart the top application match.
+- **Taskbar Layout Switcher**: Open **Control Center** -> **Appearance** to toggle between:
+  - **Standard Panel** (Windows style bottom taskbar)
+  - **Floating Dock** (macOS style dock launcher with mouse hover zoom effects)
 
 ---
 
-## 5. Settings & Control Center
-Open the **Control Center** to configure options:
-- **System**: View CPU, RAM, kernel version, and hardware components details.
-- **Appearance**: Adjust system theme, wallpaper, and accent color.
-- **Wi-Fi**: Connect to access points and check IP configurations.
-- **Firewall**: Easily enable/disable the built-in UFW firewall.
-- **Developer Mode**: Toggle developer switches to download GCC, Clang, Docker, Node.js, and Rust tools with a single click.
+## 5. Control Center & Settings tuning
+Open the **Control Center** to configure advanced options:
+- **Appearance**: Adjust system theme (Light/Dark), wallpapers, accent color, and taskbar layout.
+- **Wi-Fi Scanner**: Scan live networks, input passwords securely, and check IP addresses.
+- **Display & Audio**:
+  - **Master Volume**: Control PipeWire sound output directly.
+  - **Night Light**: Adjust screen warmth (blue light filter overlay) from 0% to 100%.
+- **Developer Mode**: Install Git, Node.js, Rust (Cargo), and Docker with a single click.
+- **Firewall**: Fast UFW state toggle blocks.

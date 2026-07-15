@@ -10,10 +10,13 @@
 
 ## 🌟 Key Features
 
-- **Agneax Desktop**: A custom Wayland desktop shell written in PySide6 and QML, optimized to run with minimal overhead (idle RAM under 700MB).
-- **High-Performance Rust Daemon (`agneax-core`)**: Provides asynchronous system telemetry, package updates, and secure administrative command execution.
+- **Agneax Desktop**: A custom Wayland desktop shell written in PySide6 and QML, optimized to run with minimal overhead (idle RAM under 700MB). Features a Windows-style Panel and macOS-style zoom Dock layouts.
+- **Widgets Dashboard & Sticky Notes**: Built-in sliding widget tray (`Super + W`) displaying live telemetry graphs, a digital clock/calendar, and persistent sticky notes.
+- **Try or Install Boot Wizard**: An Ubuntu-style greeting overlay automatically triggered in live environments, offering non-destructive live trials or direct hard drive installations.
+- **Hybrid Compositor Fallback**: A robust display startup engine that automatically cascades from Wayland (OpenGL) to Wayland (Pixman) to native X11 + Openbox to guarantee graphics loading under all hypervisors (VMware, VirtualBox).
+- **High-Performance Rust Daemon (`agneax-core`)**: Provides asynchronous system telemetry, package updates, and secure administrative command execution. Handles real sysfs battery diagnostics.
 - **C++ Compositor Helper (`libcompositor_helper.so`)**: Handles mathematical window tiling layouts and grid snaps with zero-overhead.
-- **Integrated Apps**: Beautifully-designed custom App Store, Settings Control Center, System Installer, File Manager, and GPU-Accelerated Terminal Emulator.
+- **Integrated Apps**: Beautifully-designed custom App Store, Settings Control Center (with PipeWire volume controls, nmcli Wi-Fi list scanning, and Night Light warming filters), System Installer, File Manager, and GPU-Accelerated Terminal Emulator.
 - **Secure by Default**: Out-of-the-box UFW firewall configs, Secure Boot compatibility, and automatic security updates.
 - **Developer & Gaming Ready**: One-click developer stack installs (Rust, Docker, Node, etc.) and pre-configured Wine/Proton/Steam support.
 

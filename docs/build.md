@@ -51,9 +51,11 @@ This script will:
 2. Bind mount `/proc`, `/sys`, `/dev` and chroot in.
 3. Install display server Wayland, Weston kiosk shell, LightDM, PySide6, and audio components.
 4. Copy our built Rust daemon, C++ layout library, desktop python files, settings configs, and themes.
-5. Setup automated Live user log-in triggers.
-6. Package the files into `filesystem.squashfs`.
-7. Generate BIOS/EFI hybrid boot files and run `xorriso` to create the final ISO.
+5. Setup automated Live user log-in triggers (configured via X11 xsessions for autologin reliability).
+6. Copy and compile Plymouth branding assets (UHD logo watermark at `1024x256` resolution, colorized loader spinner frames, and centered horizontal/vertical alignments).
+7. Execute `update-initramfs` after asset insertion to bake early KMS GPU drivers and logo files directly into the initrd kernel image.
+8. Package the files into `filesystem.squashfs` with `zstd` compression.
+9. Generate BIOS/EFI hybrid boot files with `union=overlay` and `squashfs.threads=0` parameters, then run `xorriso` to create the final ISO.
 
 ### Step 4: Verify Output
 The built ISO will be saved at:
@@ -61,14 +63,15 @@ The built ISO will be saved at:
 
 ---
 
-## 🛠️ VirtualBox Running & Troubleshooting Guide
+## 🛠️ Hypervisor Running & Troubleshooting Guide
 
-If the ISO fails to boot cleanly or displays a blank/black screen with only a mouse cursor, please check the settings and run the following diagnostic procedures.
+If the ISO fails to boot cleanly, drops to an initramfs BusyBox shell, or loops at the login screen, check the parameters below:
 
-### A. Recommended VirtualBox VM Parameters
-- **Graphics Controller**: Ensure it is set to **VMSVGA** (standard graphics card simulation for Linux/Wayland guests).
+### A. Recommended VM Parameters (VMware Workstation & VirtualBox)
+- **Graphics Controller**: Ensure it is set to **VMSVGA** (or enable accelerated 3D graphics in VMware).
 - **Video Memory**: Allocate at least **128 MB** of video memory.
-- **3D Acceleration**: Toggle **Enable 3D Acceleration** on. If the desktop environment fails to render, toggle it **off** to force CPU software rendering paths.
+- **3D Acceleration**: Toggle **Enable 3D Acceleration** on. If the compositor crashes, toggle it **off** to allow the systemd session engine to fallback to Pixman software rendering or native X11 + Openbox.
+- **Boot Media Delays**: If the VM boots and drops to an `initramfs` prompt, ensure the `live-media-timeout=15` kernel option is set (our GRUB boot configuration includes this by default to wait for slow VM SATA controllers).
 - **System Memory**: Allocate at least **4 GB** (minimum requirement for the live squashfs image runtime).
 
 ### B. Accessing TTY Debug Console
