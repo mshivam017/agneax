@@ -251,6 +251,10 @@ fi
 LEOF
 chmod +x /usr/bin/agneax-session-start
 
+# Update initramfs inside chroot to apply zstd compression and hardware drivers
+echo "Regenerating initramfs inside chroot..."
+update-initramfs -u -k all
+
 clean_up() {
   apt-get clean
   rm -rf /var/lib/apt/lists/*
@@ -421,19 +425,19 @@ set menu_color_highlight=black/cyan
 
 menuentry "Agneax OS Live (Standard Mode)" {
     search --set=root --file /live/vmlinuz
-    linux /live/vmlinuz boot=live quiet splash ---
+    linux /live/vmlinuz boot=live quiet splash live-media-timeout=15 ---
     initrd /live/initrd
 }
 
 menuentry "Agneax OS (Safe Graphics Mode)" {
     search --set=root --file /live/vmlinuz
-    linux /live/vmlinuz boot=live nomodeset loglevel=7 ---
+    linux /live/vmlinuz boot=live nomodeset loglevel=7 live-media-timeout=15 ---
     initrd /live/initrd
 }
 
 menuentry "Agneax OS Debug Console" {
     search --set=root --file /live/vmlinuz
-    linux /live/vmlinuz boot=live systemd.unit=multi-user.target loglevel=7 ---
+    linux /live/vmlinuz boot=live systemd.unit=multi-user.target loglevel=7 live-media-timeout=15 ---
     initrd /live/initrd
 }
 EOF
