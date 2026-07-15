@@ -260,6 +260,7 @@ echo "Attempting to launch Weston on X11 backend with OpenGL..." > /tmp/weston-s
 weston \
   --backend=x11-backend.so \
   --shell=kiosk-shell.so \
+  --idle-time=0 \
   --continue-without-input \
   --log=/tmp/weston.log \
   -- /opt/agneax/desktop/run.sh
@@ -274,6 +275,7 @@ if [ $exit_code -ne 0 ]; then
     --backend=x11-backend.so \
     --use-pixman \
     --shell=kiosk-shell.so \
+    --idle-time=0 \
     --continue-without-input \
     --log=/tmp/weston.log \
     -- /opt/agneax/desktop/run.sh
@@ -466,6 +468,24 @@ cat <<'EOF' > "$ROOTFS/opt/agneax/desktop/run.sh"
 # Startup script for Agneax Desktop environment
 export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
 export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+
+# Display scaling & HiDPI (Component 2)
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_ENABLE_HIGHDPI_SCALING=1
+
+# VSync & Double Buffering (Component 3)
+export QMNG_FORCE_DOUBLE_BUFFER=1
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+
+# GPU Texture Atlasing & Mesa OpenGL overrides (Component 4)
+export QSG_RENDERER_BACKEND=opengl
+export QSG_ATLAS_WIDTH=2048
+export QSG_ATLAS_HEIGHT=2048
+export MESA_GL_VERSION_OVERRIDE=4.5
+export MESA_GLSL_VERSION_OVERRIDE=450
+
+# X11 Shared-Memory Fallback parameters (Component 5)
+export QT_X11_NO_MITSHM=1
 
 if [ "$QT_QPA_PLATFORM" = "wayland" ]; then
     export QSG_RENDER_LOOP="${QSG_RENDER_LOOP:-threaded}"
