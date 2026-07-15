@@ -41,7 +41,14 @@ make
 ```
 The output shared library will be located at `desktop/cpp_src/build/libcompositor_helper.so`.
 
-### Step 3: Run the ISO Builder Script
+### Step 3: Compile and Package Custom Plymouth
+Run the packaging script to build the customized C Plymouth package:
+```bash
+./scripts/package_plymouth.sh
+```
+This generates `build/agneax-plymouth_1.0.0_amd64.deb` which will be automatically installed inside the chroot.
+
+### Step 4: Run the ISO Builder Script
 Run the automated script as root from the root directory of the repository:
 ```bash
 sudo ./scripts/build_iso.sh
@@ -52,7 +59,7 @@ This script will:
 3. Install display server Wayland, Weston kiosk shell, LightDM, PySide6, and audio components.
 4. Copy our built Rust daemon, C++ layout library, desktop python files, settings configs, and themes.
 5. Setup automated Live user log-in triggers (configured via X11 xsessions for autologin reliability).
-6. Copy and compile Plymouth branding assets (UHD logo watermark at `1024x256` resolution, colorized loader spinner frames, and centered horizontal/vertical alignments).
+6. Install the custom compiled Plymouth package and configure branding assets (anti-aliased text logo watermark at `380x96` resolution, colorized loader spinner frames, and centered horizontal/vertical alignments).
 7. Execute `update-initramfs` after asset insertion to bake early KMS GPU drivers and logo files directly into the initrd kernel image.
 8. Package the files into `filesystem.squashfs` with `zstd` compression.
 9. Generate BIOS/EFI hybrid boot files with `union=overlay` and `squashfs.threads=0` parameters, then run `xorriso` to create the final ISO.

@@ -18,7 +18,7 @@ This release introduces advanced graphics hardening, premium boot optimizations,
 - **Boot Hardening & Fail-safe Graphics**:
   - **Triple-Fallback graphics compositor**: Automatic failover sequence (OpenGL Weston -> Pixman Weston -> X11 + Openbox) to guarantee display output on any graphics card or VM driver.
   - **Elite Boot Speeds**: Optimized initrd packaging (`update-initramfs` after assets), multithreaded SquashFS decompression (`squashfs.threads=0`), GRUB countdown reduction (`timeout=1`), and masked blocking startup services.
-  - **Flicker-free Plymouth splash screen**: High-definition (`1024x256`) anti-aliased logo, dynamic alignment centering (`WatermarkVerticalAlignment=0.42`), and custom colorized loaders.
+  - **Custom Branded Plymouth splash screen**: Built from custom-patched C source (`agneax-plymouth`), featuring a scaled anti-aliased logo (`380x96`), native horizontal/vertical alignment centering, and custom colorized loaders.
 
 ---
 
