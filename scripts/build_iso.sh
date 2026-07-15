@@ -165,7 +165,6 @@ systemctl set-default graphical.target
 # Configure initramfs tools to use zstd compression for faster boot (Step 1)
 if [ -f /etc/initramfs-tools/initramfs.conf ]; then
   sed -i 's/COMPRESS=gzip/COMPRESS=zstd/g' /etc/initramfs-tools/initramfs.conf
-  sed -i 's/MODULES=most/MODULES=dep/g' /etc/initramfs-tools/initramfs.conf
 fi
 
 # Mask blocking early services to speed up boot sequence (Phase 4)
