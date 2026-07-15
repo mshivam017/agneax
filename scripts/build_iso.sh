@@ -219,13 +219,13 @@ cat <<'LEOF' > /etc/lightdm/lightdm.conf.d/agneax.conf
 [Seat:*]
 autologin-user=agneax
 autologin-user-timeout=0
-user-session=agneax-wayland
-autologin-session=agneax-wayland
+user-session=agneax
+autologin-session=agneax
 greeter-session=lightdm-gtk-greeter
 LEOF
 
-mkdir -p /usr/share/wayland-sessions
-cat <<'LEOF' > /usr/share/wayland-sessions/agneax-wayland.desktop
+mkdir -p /usr/share/xsessions
+cat <<'LEOF' > /usr/share/xsessions/agneax.desktop
 [Desktop Entry]
 Name=Agneax Desktop
 Comment=Fast, beautiful and secure QML desktop shell
@@ -236,20 +236,17 @@ LEOF
 
 cat <<'LEOF' > /usr/bin/agneax-session-start
 #!/usr/bin/env bash
-# Start Weston compositor in fullscreen mode and autostart Agneax Shell
+# Start Weston compositor inside LightDM X11 session and autostart Agneax Shell
 set -u
-
-export QT_QPA_PLATFORM=wayland
-export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
 
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 
-# 1. Try launching Weston with default OpenGL renderer
-echo "Attempting to launch Weston with OpenGL renderer..." > /tmp/weston-start.log
-dbus-run-session -- weston \
-  --backend=drm-backend.so \
+# 1. Try launching Weston on X11 backend with OpenGL
+echo "Attempting to launch Weston on X11 backend with OpenGL..." > /tmp/weston-start.log
+weston \
+  --backend=x11-backend.so \
   --shell=kiosk-shell.so \
   --continue-without-input \
   --log=/tmp/weston.log \
@@ -258,11 +255,11 @@ dbus-run-session -- weston \
 exit_code=$?
 echo "Weston exited with code $exit_code" >> /tmp/weston-start.log
 
-# 2. If it crashed (exit_code != 0), fall back to Pixman software renderer!
+# 2. If it failed, try launching Weston with Pixman software renderer on X11 backend
 if [ $exit_code -ne 0 ]; then
-  echo "OpenGL failed. Falling back to Pixman software renderer..." >> /tmp/weston-start.log
-  dbus-run-session -- weston \
-    --backend=drm-backend.so \
+  echo "OpenGL failed. Falling back to Pixman software renderer on X11..." >> /tmp/weston-start.log
+  weston \
+    --backend=x11-backend.so \
     --use-pixman \
     --shell=kiosk-shell.so \
     --continue-without-input \
@@ -271,11 +268,12 @@ if [ $exit_code -ne 0 ]; then
   exit_code=$?
 fi
 
-# 3. If Weston still failed (e.g. no KMS device in VM), fall back to X11 + Openbox!
+# 3. If Weston still failed completely, run the Python QML desktop natively on X11 using Openbox!
 if [ $exit_code -ne 0 ]; then
-  echo "Weston compositor failed completely. Launching X11 fallback session..." >> /tmp/weston-start.log
+  echo "Weston failed completely. Falling back to native X11 session with Openbox..." >> /tmp/weston-start.log
   export QT_QPA_PLATFORM=xcb
-  exec startx /usr/bin/openbox-session -- /opt/agneax/desktop/run.sh
+  openbox &
+  exec /opt/agneax/desktop/run.sh
 fi
 LEOF
 chmod +x /usr/bin/agneax-session-start
