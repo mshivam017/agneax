@@ -170,25 +170,46 @@ class SystemBridge(QObject):
     def _simulate_telemetry(self):
         # Graceful simulation to allow direct running of the UI on Windows/Mac
         import random
-        with self.lock:
-            self._telemetry["cpu_usage"] = round(random.uniform(2.0, 15.0), 1)
-            self._telemetry["cpu_temp"] = round(40.0 + random.uniform(0, 10), 1)
-            # Memory variation
-            used = self._telemetry["used_mem"] + int(random.uniform(-50000000, 50000000))
-            used = max(1000000000, min(used, self._telemetry["total_mem"]))
-            self._telemetry["used_mem"] = used
-            self._telemetry["mem_usage_pct"] = round((used / self._telemetry["total_mem"]) * 100.0, 1)
-            
-            # Uptime increments
-            self._telemetry["uptime"] += 1
-            
-            # Battery level drops/changes
-            pct = self._telemetry["battery"]["pct"]
-            if random.random() > 0.95:
-                pct = max(10, pct - 1)
-                self._telemetry["battery"]["pct"] = pct
+        try:
+            with self.lock:
+                # Ensure all default keys exist in self._telemetry before simulating
+                defaults = {
+                    "cpu_usage": 0.0,
+                    "total_mem": 8589934592,
+                    "used_mem": 4294967296,
+                    "mem_usage_pct": 50.0,
+                    "cpu_temp": 45.0,
+                    "disks": [{"mount_point": "/", "total": 128000000000, "available": 64000000000}],
+                    "battery": {"pct": 80, "charging": True},
+                    "uptime": 3600
+                }
+                for k, v in defaults.items():
+                    if k not in self._telemetry or self._telemetry[k] is None:
+                        self._telemetry[k] = v
 
-        self.telemetry_thread_safe_emit()
+                self._telemetry["cpu_usage"] = round(random.uniform(2.0, 15.0), 1)
+                self._telemetry["cpu_temp"] = round(40.0 + random.uniform(0, 10), 1)
+                # Memory variation
+                used = self._telemetry["used_mem"] + int(random.uniform(-50000000, 50000000))
+                used = max(1000000000, min(used, self._telemetry["total_mem"]))
+                self._telemetry["used_mem"] = used
+                self._telemetry["mem_usage_pct"] = round((used / self._telemetry["total_mem"]) * 100.0, 1)
+                
+                # Uptime increments
+                self._telemetry["uptime"] += 1
+                
+                # Battery level drops/changes
+                if isinstance(self._telemetry["battery"], dict) and "pct" in self._telemetry["battery"]:
+                    pct = self._telemetry["battery"]["pct"]
+                    if random.random() > 0.95:
+                        pct = max(10, pct - 1)
+                        self._telemetry["battery"]["pct"] = pct
+                else:
+                    self._telemetry["battery"] = {"pct": 80, "charging": True}
+
+            self.telemetry_thread_safe_emit()
+        except Exception as e:
+            print(f"Error during telemetry simulation: {e}")
 
     def telemetry_thread_safe_emit(self):
         # Helper to push updates to front-end thread
