@@ -28,6 +28,11 @@ ApplicationWindow {
     property var firewall: JSON.parse(settingsBridge.getFirewallSettings())
     property var systemSpecs: JSON.parse(settingsBridge.getSystemSpecs())
 
+    property string statusGit: "Install"
+    property string statusNode: "Install"
+    property string statusRust: "Install"
+    property string statusDocker: "Install"
+
     Connections {
         target: settingsBridge
         onSettingsChanged: {
@@ -325,6 +330,28 @@ ApplicationWindow {
                                     MouseArea { anchors.fill: parent; onClicked: settingsBridge.saveAppearance("wallpaper", "Neon Horizon") }
                                 }
                             }
+
+                            Item { height: 10 }
+
+                            Text { text: "Select Taskbar Layout"; font.bold: true; font.pixelSize: 12; color: ccWindow.textPrimaryColor }
+
+                            RowLayout {
+                                spacing: 14
+                                Layout.fillWidth: true
+
+                                // Standard Panel
+                                Rectangle {
+                                    width: 140; height: 50; radius: 6; color: "#252B3C"; border.color: ccWindow.appearance.taskbar_layout == "Panel" ? ccWindow.activeAccentColor : ccWindow.borderColor; border.width: ccWindow.appearance.taskbar_layout == "Panel" ? 2 : 1
+                                    Text { anchors.centerIn: parent; text: "Standard Panel"; font.pixelSize: 11; font.bold: true; color: "#FFFFFF" }
+                                    MouseArea { anchors.fill: parent; onClicked: settingsBridge.saveAppearance("taskbar_layout", "Panel") }
+                                }
+                                // Floating Dock
+                                Rectangle {
+                                    width: 140; height: 50; radius: 6; color: "#1E2530"; border.color: ccWindow.appearance.taskbar_layout == "Dock" ? ccWindow.activeAccentColor : ccWindow.borderColor; border.width: ccWindow.appearance.taskbar_layout == "Dock" ? 2 : 1
+                                    Text { anchors.centerIn: parent; text: "Floating Dock"; font.pixelSize: 11; font.bold: true; color: "#FFFFFF" }
+                                    MouseArea { anchors.fill: parent; onClicked: settingsBridge.saveAppearance("taskbar_layout", "Dock") }
+                                }
+                            }
                         }
                     }
                 }
@@ -379,7 +406,7 @@ ApplicationWindow {
                     // Available Network List Card
                     Rectangle {
                         Layout.fillWidth: true
-                        height: 200
+                        height: 220
                         color: ccWindow.cardBgColor
                         radius: 12
                         border.color: ccWindow.borderColor
@@ -390,28 +417,51 @@ ApplicationWindow {
                             anchors.margins: 18
                             spacing: 8
 
-                            Text { text: "Available Wi-Fi Networks"; font.bold: true; font.pixelSize: 11; color: ccWindow.activeAccentColor }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Available Wi-Fi Networks"; font.bold: true; font.pixelSize: 11; color: ccWindow.activeAccentColor }
+                                Item { Layout.fillWidth: true }
+                                Text {
+                                    id: wifiStatusText
+                                    text: ""
+                                    font.pixelSize: 9
+                                    color: ccWindow.activeAccentColor
+                                }
+                            }
 
                             ListModel {
                                 id: wifiListModel
-                                ListElement { name: "Agneax_Secure_5G"; locked: true; strength: "⭐⭐⭐⭐" }
-                                ListElement { name: "Public_Airport_WiFi"; locked: false; strength: "⭐⭐⭐" }
-                                ListElement { name: "Guest_House_Network"; locked: true; strength: "⭐⭐" }
                             }
 
                             ListView {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 model: wifiListModel
+                                clip: true
                                 delegate: Item {
                                     width: parent.width
                                     height: 32
                                     RowLayout {
                                         anchors.fill: parent
-                                        Text { text: model.name; font.pixelSize: 11; color: ccWindow.textPrimaryColor }
+                                        spacing: 8
+                                        Text { text: model.name; font.pixelSize: 11; font.bold: model.active; color: model.active ? ccWindow.activeAccentColor : ccWindow.textPrimaryColor }
+                                        Text { text: model.active ? " (Connected)" : ""; font.pixelSize: 9; color: ccWindow.activeAccentColor }
                                         Text { text: model.locked ? "🔒" : "🔓"; font.pixelSize: 10 }
                                         Item { Layout.fillWidth: true }
                                         Text { text: model.strength; font.pixelSize: 10 }
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: {
+                                            if (model.locked) {
+                                                wifiPasswordDialog.targetSsid = model.name;
+                                                wifiPasswordInput.text = "";
+                                                wifiPasswordDialog.open();
+                                            } else {
+                                                wifiStatusText.text = "Connecting to " + model.name + "...";
+                                                settingsBridge.connectToWifi(model.name, "");
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -561,22 +611,54 @@ ApplicationWindow {
                                 RowLayout {
                                     Text { text: "🛠️ Git & Dev Tools"; font.pixelSize: 11; color: ccWindow.textPrimaryColor }
                                     Item { Layout.fillWidth: true }
-                                    Button { text: "Install"; font.pixelSize: 9 }
+                                    Button {
+                                        text: ccWindow.statusGit
+                                        font.pixelSize: 9
+                                        enabled: ccWindow.statusGit != "Installing..." && ccWindow.statusGit != "Installed"
+                                        onClicked: {
+                                            ccWindow.statusGit = "Installing..."
+                                            settingsBridge.installDevTool("git")
+                                        }
+                                    }
                                 }
                                 RowLayout {
                                     Text { text: "📦 Node.js & NPM"; font.pixelSize: 11; color: ccWindow.textPrimaryColor }
                                     Item { Layout.fillWidth: true }
-                                    Button { text: "Install"; font.pixelSize: 9 }
+                                    Button {
+                                        text: ccWindow.statusNode
+                                        font.pixelSize: 9
+                                        enabled: ccWindow.statusNode != "Installing..." && ccWindow.statusNode != "Installed"
+                                        onClicked: {
+                                            ccWindow.statusNode = "Installing..."
+                                            settingsBridge.installDevTool("node")
+                                        }
+                                    }
                                 }
                                 RowLayout {
                                     Text { text: "🦀 Rust & Cargo"; font.pixelSize: 11; color: ccWindow.textPrimaryColor }
                                     Item { Layout.fillWidth: true }
-                                    Button { text: "Install"; font.pixelSize: 9 }
+                                    Button {
+                                        text: ccWindow.statusRust
+                                        font.pixelSize: 9
+                                        enabled: ccWindow.statusRust != "Installing..." && ccWindow.statusRust != "Installed"
+                                        onClicked: {
+                                            ccWindow.statusRust = "Installing..."
+                                            settingsBridge.installDevTool("rust")
+                                        }
+                                    }
                                 }
                                 RowLayout {
                                     Text { text: "🐳 Docker Engine"; font.pixelSize: 11; color: ccWindow.textPrimaryColor }
                                     Item { Layout.fillWidth: true }
-                                    Button { text: "Install"; font.pixelSize: 9 }
+                                    Button {
+                                        text: ccWindow.statusDocker
+                                        font.pixelSize: 9
+                                        enabled: ccWindow.statusDocker != "Installing..." && ccWindow.statusDocker != "Installed"
+                                        onClicked: {
+                                            ccWindow.statusDocker = "Installing..."
+                                            settingsBridge.installDevTool("docker")
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -605,7 +687,7 @@ ApplicationWindow {
                     // Display Card
                     Rectangle {
                         Layout.fillWidth: true
-                        height: 140
+                        height: 200
                         color: ccWindow.cardBgColor
                         radius: 12
                         border.color: ccWindow.borderColor
@@ -635,6 +717,24 @@ ApplicationWindow {
                                         model: ["60 Hz", "120 Hz", "144 Hz"]
                                         width: 120
                                     }
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Night Light"; font.pixelSize: 10; color: ccWindow.textSecondaryColor; Layout.preferredWidth: 100 }
+                                Slider {
+                                    id: nightLightSlider
+                                    value: ccWindow.appearance.night_light || 0.0
+                                    Layout.fillWidth: true
+                                    onMoved: {
+                                        settingsBridge.saveAppearance("night_light", value);
+                                    }
+                                }
+                                Text {
+                                    text: Math.round(nightLightSlider.value * 100) + "%"
+                                    font.pixelSize: 11
+                                    color: ccWindow.textPrimaryColor
                                 }
                             }
                         }
@@ -669,8 +769,14 @@ ApplicationWindow {
                                 Text { text: "Master Volume"; font.pixelSize: 10; color: ccWindow.textSecondaryColor; Layout.preferredWidth: 100 }
                                 Slider {
                                     id: volumeSlider
-                                    value: 0.8
+                                    value: 0.7
                                     Layout.fillWidth: true
+                                    Component.onCompleted: {
+                                        value = settingsBridge.getVolume() / 100.0;
+                                    }
+                                    onMoved: {
+                                        settingsBridge.setVolume(Math.round(value * 100));
+                                    }
                                 }
                                 Text {
                                     text: Math.round(volumeSlider.value * 100) + "%"
@@ -802,6 +908,138 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+
+    // WiFi Scanning Timer (Phase 1)
+    Timer {
+        id: wifiScanTimer
+        interval: 4000
+        running: ccWindow.currentCategory == 2 && ccWindow.network.wifi_enabled
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
+            updateWifiList();
+        }
+    }
+
+    function updateWifiList() {
+        try {
+            var raw = settingsBridge.getWifiNetworks();
+            var list = JSON.parse(raw);
+            wifiListModel.clear();
+            for (var i = 0; i < list.length; i++) {
+                var item = list[i];
+                var stars = "⭐";
+                if (item.signal > 75) stars = "⭐⭐⭐⭐";
+                else if (item.signal > 50) stars = "⭐⭐⭐";
+                else if (item.signal > 25) stars = "⭐⭐";
+                
+                wifiListModel.append({
+                    "name": item.ssid,
+                    "locked": item.secured,
+                    "strength": stars,
+                    "active": item.active
+                });
+            }
+        } catch(e) {
+            console.log("Error scanning WiFi: " + e);
+        }
+    }
+
+    // WiFi Password Prompt Dialog (Phase 1)
+    Dialog {
+        id: wifiPasswordDialog
+        title: "Connect to Wi-Fi"
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 320
+        height: 180
+        modal: true
+        
+        property string targetSsid: ""
+
+        background: Rectangle {
+            color: ccWindow.cardBgColor
+            radius: 12
+            border.color: ccWindow.borderColor
+        }
+
+        header: Text {
+            text: "Enter Password for " + wifiPasswordDialog.targetSsid
+            color: ccWindow.textPrimaryColor
+            font.bold: true
+            font.pixelSize: 13
+            horizontalAlignment: Text.AlignHCenter
+            topPadding: 14
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 14
+            spacing: 12
+
+            TextField {
+                id: wifiPasswordInput
+                placeholderText: "Password"
+                echoMode: TextField.Password
+                Layout.fillWidth: true
+                color: ccWindow.textPrimaryColor
+                background: Rectangle {
+                    color: ccWindow.contentBgColor
+                    radius: 6
+                    border.color: ccWindow.borderColor
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                
+                Button {
+                    text: "Cancel"
+                    Layout.fillWidth: true
+                    onClicked: wifiPasswordDialog.close()
+                }
+                
+                Button {
+                    text: "Connect"
+                    Layout.fillWidth: true
+                    onClicked: {
+                        wifiStatusText.text = "Connecting to " + wifiPasswordDialog.targetSsid + "...";
+                        settingsBridge.connectToWifi(wifiPasswordDialog.targetSsid, wifiPasswordInput.text);
+                        wifiPasswordDialog.close();
+                    }
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: wifiStatusTextTimer
+        interval: 3000
+        running: false
+        repeat: false
+        onTriggered: {
+            wifiStatusText.text = "";
+        }
+    }
+
+    Connections {
+        target: settingsBridge
+        onWifiConnectCompleted: {
+            console.log("WiFi connection completed for: " + ssid + " success: " + success + " msg: " + error_message);
+            wifiStatusText.text = success ? "Connected successfully" : "Connection failed";
+            wifiStatusTextTimer.start();
+            updateWifiList();
+        }
+        onDevToolInstallCompleted: {
+            console.log("Dev tool connection completed: " + tool_id + " success: " + success);
+            var label = success ? "Installed" : "Failed";
+            if (tool_id == "git") ccWindow.statusGit = label;
+            else if (tool_id == "node") ccWindow.statusNode = label;
+            else if (tool_id == "rust") ccWindow.statusRust = label;
+            else if (tool_id == "docker") ccWindow.statusDocker = label;
         }
     }
 }

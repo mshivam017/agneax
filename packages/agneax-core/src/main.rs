@@ -134,9 +134,26 @@ async fn handle_request(req: Request, sys: &mut System) -> Response {
                 }));
             }
 
-            // Mock battery (to keep logic cross-platform and reliable)
-            let battery_pct = 95;
-            let is_charging = true;
+            // Read real battery capacity if available, fallback to mock values
+            let mut battery_pct = 95;
+            let mut is_charging = true;
+            
+            if let Ok(cap_str) = std::fs::read_to_string("/sys/class/power_supply/BAT0/capacity") {
+                if let Ok(cap) = cap_str.trim().parse::<i32>() {
+                    battery_pct = cap;
+                }
+            } else if let Ok(cap_str) = std::fs::read_to_string("/sys/class/power_supply/BAT1/capacity") {
+                if let Ok(cap) = cap_str.trim().parse::<i32>() {
+                    battery_pct = cap;
+                }
+            }
+
+            if let Ok(status_str) = std::fs::read_to_string("/sys/class/power_supply/BAT0/status") {
+                is_charging = status_str.trim().to_lowercase() == "charging";
+            } else if let Ok(status_str) = std::fs::read_to_string("/sys/class/power_supply/BAT1/status") {
+                is_charging = status_str.trim().to_lowercase() == "charging";
+            }
+
             let uptime = sysinfo::System::uptime();
 
             let telemetry_data = serde_json::json!({

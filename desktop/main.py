@@ -51,6 +51,8 @@ class SystemBridge(QObject):
     wallpaperPathChanged = Signal(str)
     themeChanged = Signal(str)
     accentColorChanged = Signal(str)
+    taskbarLayoutChanged = Signal(str)
+    nightLightChanged = Signal(float)
 
     def __init__(self):
         super().__init__()
@@ -232,11 +234,15 @@ class SystemBridge(QObject):
                         "theme": "Dark Mode",
                         "accent_color": "#00F2FE",
                         "wallpaper": "Sleek Carbon Glass",
+                        "taskbar_layout": "Panel",
+                        "night_light": 0.0
                     })
                     # Emit signals to QML
                     self.wallpaperPathChanged.emit(self.wallpaperPath)
                     self.themeChanged.emit(self._appearance.get("theme", "Dark Mode"))
                     self.accentColorChanged.emit(self._appearance.get("accent_color", "#00F2FE"))
+                    self.taskbarLayoutChanged.emit(self._appearance.get("taskbar_layout", "Panel"))
+                    self.nightLightChanged.emit(float(self._appearance.get("night_light", 0.0)))
             except Exception as e:
                 print(f"Error checking settings updates: {e}")
 
@@ -283,6 +289,14 @@ class SystemBridge(QObject):
     @Property(str, notify=accentColorChanged)
     def accentColor(self):
         return self._appearance.get("accent_color", "#00F2FE")
+
+    @Property(str, notify=taskbarLayoutChanged)
+    def taskbarLayout(self):
+        return self._appearance.get("taskbar_layout", "Panel")
+
+    @Property(float, notify=nightLightChanged)
+    def nightLight(self):
+        return float(self._appearance.get("night_light", 0.0))
 
     # Exposed Window management layout calculators (utilizes C++ libraries or Python fallback)
     @Slot(int, int, int, int, int, int, result=str)
@@ -364,7 +378,6 @@ class SystemBridge(QObject):
         print(f"Launching application safely: {app_name}")
         import subprocess
 
-        # Strict allowlist of commands to execute (Step 4)
         allowlist = {
             "control-center": ["python3", "../control-center/main.py"],
             "store": ["python3", "../store/main.py"],
@@ -385,6 +398,27 @@ class SystemBridge(QObject):
                 print(f"Error launching {app_name}: {e}")
         else:
             print(f"Blocked attempt to launch non-allowlisted application: {app_name}")
+
+    @Slot(str)
+    def saveNotes(self, text):
+        try:
+            path = os.path.expanduser("~/.config/agneax")
+            os.makedirs(path, exist_ok=True)
+            with open(os.path.join(path, "notes.txt"), "w") as f:
+                f.write(text)
+        except Exception as e:
+            print("Failed to save notes:", e)
+
+    @Slot(result=str)
+    def loadNotes(self):
+        try:
+            path = os.path.expanduser("~/.config/agneax/notes.txt")
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    return f.read()
+        except Exception:
+            pass
+        return ""
 
 def main():
     app = QApplication(sys.argv)

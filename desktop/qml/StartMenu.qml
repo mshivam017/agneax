@@ -70,6 +70,17 @@ Rectangle {
                     font.family: "Segoe UI, Inter"
                     font.pixelSize: 12
                     selectByMouse: true
+                    Keys.onReturnPressed: {
+                        for (var i = 0; i < rootMenu.appsList.length; i++) {
+                            var app = rootMenu.appsList[i];
+                            if (app.name.toLowerCase().includes(searchField.text.toLowerCase())) {
+                                systemBridge.launchApp(app.id);
+                                root.startMenuOpen = false;
+                                searchField.text = "";
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }

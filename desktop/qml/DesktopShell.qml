@@ -23,6 +23,8 @@ ApplicationWindow {
     // Open/Close triggers for Panels
     property bool startMenuOpen: false
     property bool quickSettingsOpen: false
+    property bool widgetsOpen: false
+    property string taskbarLayout: systemBridge.taskbarLayout
     property int snapPreviewDirection: 0 // 0=None, 1=Left, 2=Right, 7=Fullscreen
 
     // Telemetry storage (updated from SystemBridge python class)
@@ -39,11 +41,16 @@ ApplicationWindow {
         onTelemetryUpdated: {
             telemetry = JSON.parse(data);
         }
+        onTaskbarLayoutChanged: {
+            taskbarLayout = layout;
+        }
     }
 
     Component.onCompleted: {
         // Fetch initial telemetry
         telemetry = JSON.parse(systemBridge.getTelemetry());
+        // Set focus to capture keys
+        root.forceActiveFocus();
     }
 
     // Dynamic abstract wallpaper background
@@ -98,19 +105,19 @@ ApplicationWindow {
     // Glassmorphic Start Menu Overlay
     StartMenu {
         id: startMenu
-        anchors.bottom: panel.top
+        anchors.bottom: root.taskbarLayout == "Panel" ? panel.top : parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottomMargin: 12
+        anchors.bottomMargin: root.taskbarLayout == "Panel" ? 12 : 20
         visible: root.startMenuOpen
     }
 
     // Glassmorphic Quick Settings Overlay
     QuickSettings {
         id: quickSettings
-        anchors.bottom: panel.top
+        anchors.bottom: root.taskbarLayout == "Panel" ? panel.top : parent.bottom
         anchors.right: parent.right
         anchors.rightMargin: 20
-        anchors.bottomMargin: 12
+        anchors.bottomMargin: root.taskbarLayout == "Panel" ? 12 : 20
         visible: root.quickSettingsOpen
     }
 
@@ -121,15 +128,16 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 52
+        visible: root.taskbarLayout == "Panel"
     }
 
     // Floating Dock Launcher (Step 1.2)
     Dock {
         id: dock
-        anchors.bottom: panel.top
+        anchors.bottom: root.taskbarLayout == "Panel" ? panel.top : parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottomMargin: 8
-        visible: !root.startMenuOpen && !root.quickSettingsOpen
+        anchors.bottomMargin: root.taskbarLayout == "Panel" ? 8 : 16
+        visible: root.taskbarLayout == "Dock" && !root.startMenuOpen && !root.quickSettingsOpen
     }
 
     // Snapping Highlight Preview Overlay (Step 1.1)
@@ -161,9 +169,53 @@ ApplicationWindow {
 
     // Default Running Window on Desktop
     DesktopWindow {
+        id: settingsWindow
         windowTitle: "Agneax System Settings"
         iconText: "⚙️"
         x: 150
         y: 120
+    }
+
+    // Widgets Dashboard (Phase 5)
+    WidgetsDashboard {
+        id: widgetsDashboard
+        x: root.widgetsOpen ? 0 : -340
+        anchors.top: parent.top
+        z: 100
+
+        Behavior on x {
+            NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+        }
+    }
+
+    // Night Light warm filter overlay (Phase 5)
+    Rectangle {
+        id: nightLightOverlay
+        anchors.fill: parent
+        color: "#FF7000"
+        opacity: (systemBridge.nightLight || 0.0) * 0.18
+        z: 999999
+        enabled: false
+    }
+
+    // Global Keyboard Shortcuts (Phase 5)
+    focus: true
+    Keys.onPressed: {
+        if (event.key === Qt.Key_Menu || event.key === Qt.Key_Meta) {
+            root.startMenuOpen = !root.startMenuOpen;
+            event.accepted = true;
+        }
+        if (event.key === Qt.Key_T && (event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.AltModifier)) {
+            systemBridge.launchApp("terminal");
+            event.accepted = true;
+        }
+        if (event.key === Qt.Key_W && (event.modifiers & Qt.MetaModifier)) {
+            root.widgetsOpen = !root.widgetsOpen;
+            event.accepted = true;
+        }
+        if (event.key === Qt.Key_D && (event.modifiers & Qt.MetaModifier)) {
+            settingsWindow.visible = !settingsWindow.visible;
+            event.accepted = true;
+        }
     }
 }
