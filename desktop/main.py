@@ -292,8 +292,19 @@ class SystemBridge(QObject):
 
     @Property(bool)
     def isLiveEnvironment(self):
+        # 1. Check kernel parameters (most robust for live-boot)
+        try:
+            if os.path.exists("/proc/cmdline"):
+                with open("/proc/cmdline", "r") as f:
+                    if "boot=live" in f.read():
+                        return True
+        except Exception as e:
+            print(f"Error reading cmdline: {e}")
+
+        # 2. Fallback to standard files and paths
         return (os.path.exists("/live/image/live/filesystem.squashfs") or 
                 os.path.exists("/run/live/medium/live/filesystem.squashfs") or
+                os.path.exists("/run/initramfs/livedev") or
                 os.path.exists("d:/myprojects/Github/live-mock-trigger"))
 
     @Property(str, notify=taskbarLayoutChanged)
