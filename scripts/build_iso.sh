@@ -427,6 +427,21 @@ except Exception as e:
     print(f"Warning: Failed to generate PNG assets using PySide6: {e}")
 ' || true
 
+# Install Agneax Store Debian Package (Step 7)
+cp "build/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
+chroot "$ROOTFS" dpkg -i /tmp/agneax-store_1.0.0_amd64.deb || true
+rm -f "$ROOTFS/tmp/agneax-store_1.0.0_amd64.deb"
+
+# Install Custom Branded Plymouth Package (deep C customizations)
+if [ -f "build/agneax-plymouth_1.0.0_amd64.deb" ]; then
+  echo "Installing custom branded Plymouth package..."
+  cp "build/agneax-plymouth_1.0.0_amd64.deb" "$ROOTFS/tmp/"
+  chroot "$ROOTFS" dpkg -i /tmp/agneax-plymouth_1.0.0_amd64.deb || true
+  rm -f "$ROOTFS/tmp/agneax-plymouth_1.0.0_amd64.deb"
+else
+  echo "Warning: build/agneax-plymouth_1.0.0_amd64.deb not found. Skipping compilation installer fallback."
+fi
+
 # Copy generated PNG wallpaper and logos
 if [ -f "build/wallpaper.png" ]; then
   mkdir -p "$IMAGE/boot/grub"
@@ -464,21 +479,6 @@ for filepath in glob.glob(os.path.join(spinner_dir, "spinner-*.png")):
     img.save(filepath)
 print("Plymouth spinner frames colorized successfully.")
 ' || true
-fi
-
-# Install Agneax Store Debian Package (Step 7)
-cp "build/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
-chroot "$ROOTFS" dpkg -i /tmp/agneax-store_1.0.0_amd64.deb || true
-rm -f "$ROOTFS/tmp/agneax-store_1.0.0_amd64.deb"
-
-# Install Custom Branded Plymouth Package (deep C customizations)
-if [ -f "build/agneax-plymouth_1.0.0_amd64.deb" ]; then
-  echo "Installing custom branded Plymouth package..."
-  cp "build/agneax-plymouth_1.0.0_amd64.deb" "$ROOTFS/tmp/"
-  chroot "$ROOTFS" dpkg -i /tmp/agneax-plymouth_1.0.0_amd64.deb || true
-  rm -f "$ROOTFS/tmp/agneax-plymouth_1.0.0_amd64.deb"
-else
-  echo "Warning: build/agneax-plymouth_1.0.0_amd64.deb not found. Skipping compilation installer fallback."
 fi
 
 # Copy configs (lightdm, network, rules)
