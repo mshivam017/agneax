@@ -24,6 +24,7 @@ ApplicationWindow {
     property bool startMenuOpen: false
     property bool quickSettingsOpen: false
     property bool widgetsOpen: false
+    property bool welcomeDialogOpen: systemBridge.isLiveEnvironment
     property string taskbarLayout: systemBridge.taskbarLayout
     property int snapPreviewDirection: 0 // 0=None, 1=Left, 2=Right, 7=Fullscreen
 
@@ -196,6 +197,127 @@ ApplicationWindow {
         opacity: (systemBridge.nightLight || 0.0) * 0.18
         z: 999999
         enabled: false
+    }
+
+    // Ubuntu-style "Try or Install" Welcome Dialog Overlay
+    Rectangle {
+        id: welcomeOverlay
+        anchors.fill: parent
+        color: "rgba(10, 12, 18, 0.85)"
+        z: 9999999
+        visible: root.welcomeDialogOpen
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: 580
+            height: 380
+            color: root.glassBgColor
+            border.color: root.borderColor
+            border.width: 1
+            radius: 20
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 30
+                spacing: 20
+
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 4
+                    Text {
+                        text: "Agnea"
+                        font.pixelSize: 36
+                        font.bold: true
+                        color: root.textPrimaryColor
+                    }
+                    Text {
+                        text: "X"
+                        font.pixelSize: 36
+                        font.bold: true
+                        color: "#FF6600"
+                    }
+                    Text {
+                        text: " OS"
+                        font.pixelSize: 36
+                        font.bold: true
+                        color: root.textPrimaryColor
+                    }
+                }
+
+                Text {
+                    text: "Welcome! Would you like to try Agneax OS live or install it permanently?"
+                    font.pixelSize: 13
+                    color: root.textSecondaryColor
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                }
+
+                Item { height: 10 }
+
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 30
+
+                    Rectangle {
+                        width: 180
+                        height: 120
+                        color: tryMouseArea.containsMouse ? "rgba(255, 255, 255, 0.08)" : root.cardBgColor
+                        border.color: tryMouseArea.containsMouse ? root.accentColor : root.borderColor
+                        border.width: 1.5
+                        radius: 14
+
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            Text { text: "💻"; font.pixelSize: 32; Layout.alignment: Qt.AlignHCenter }
+                            Text { text: "Try Agneax OS"; font.bold: true; font.pixelSize: 12; color: root.textPrimaryColor; Layout.alignment: Qt.AlignHCenter }
+                        }
+
+                        MouseArea {
+                            id: tryMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: {
+                                root.welcomeDialogOpen = false;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 180
+                        height: 120
+                        color: installMouseArea.containsMouse ? "rgba(255, 255, 255, 0.08)" : root.cardBgColor
+                        border.color: installMouseArea.containsMouse ? root.accentColor : root.borderColor
+                        border.width: 1.5
+                        radius: 14
+
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            Text { text: "💾"; font.pixelSize: 32; Layout.alignment: Qt.AlignHCenter }
+                            Text { text: "Install Agneax OS"; font.bold: true; font.pixelSize: 12; color: root.textPrimaryColor; Layout.alignment: Qt.AlignHCenter }
+                        }
+
+                        MouseArea {
+                            id: installMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: {
+                                systemBridge.launchApp("installer");
+                                root.welcomeDialogOpen = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Global Keyboard Shortcuts (Phase 5)

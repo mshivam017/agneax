@@ -290,6 +290,12 @@ class SystemBridge(QObject):
     def accentColor(self):
         return self._appearance.get("accent_color", "#00F2FE")
 
+    @Property(bool)
+    def isLiveEnvironment(self):
+        return (os.path.exists("/live/image/live/filesystem.squashfs") or 
+                os.path.exists("/run/live/medium/live/filesystem.squashfs") or
+                os.path.exists("d:/myprojects/Github/live-mock-trigger"))
+
     @Property(str, notify=taskbarLayoutChanged)
     def taskbarLayout(self):
         return self._appearance.get("taskbar_layout", "Panel")
