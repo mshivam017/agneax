@@ -300,12 +300,12 @@ chmod +x ./scripts/package_store.sh
 ./scripts/package_store.sh
 
 # Generate PNG wallpaper from SVG vector for GRUB background (Step 2)
-echo "Generating PNG wallpaper and boot logo from SVG vectors..."
+echo "Generating PNG wallpaper and text-based boot logo..."
 python3 -c '
 try:
-    from PySide6.QtGui import QPixmap, QPainter
+    from PySide6.QtGui import QPixmap, QPainter, QFont, QColor
     from PySide6.QtSvg import QSvgRenderer
-    from PySide6.QtCore import QSize
+    from PySide6.QtCore import QSize, Qt, QPoint
     
     # Render Wallpaper
     renderer_wp = QSvgRenderer("branding/wallpaper.svg")
@@ -317,15 +317,34 @@ try:
     pixmap_wp.save("build/wallpaper.png")
     print("PNG wallpaper generated successfully.")
     
-    # Render Logo (320x320 for Plymouth center watermark boot logo)
-    renderer_logo = QSvgRenderer("branding/logo.svg")
-    pixmap_logo = QPixmap(QSize(320, 320))
-    pixmap_logo.fill()
+    # Render Text-based Boot Logo ("Agnea" in white, "X" in orange)
+    pixmap_logo = QPixmap(QSize(512, 128))
+    pixmap_logo.fill(Qt.transparent)
     painter_logo = QPainter(pixmap_logo)
-    renderer_logo.render(painter_logo)
+    painter_logo.setRenderHint(QPainter.Antialiasing)
+    painter_logo.setRenderHint(QPainter.TextAntialiasing)
+    
+    font = QFont("Sans-Serif", 48, QFont.Bold)
+    painter_logo.setFont(font)
+    
+    fm = painter_logo.fontMetrics()
+    w_agnea = fm.horizontalAdvance("Agnea")
+    w_x = fm.horizontalAdvance("X")
+    total_w = w_agnea + w_x
+    start_x = (512 - total_w) // 2
+    baseline_y = 64 + (fm.ascent() - fm.descent()) // 2
+    
+    # Draw "Agnea" in White
+    painter_logo.setPen(QColor("#FFFFFF"))
+    painter_logo.drawText(QPoint(start_x, baseline_y), "Agnea")
+    
+    # Draw "X" in Premium Bright Orange
+    painter_logo.setPen(QColor("#FF6600"))
+    painter_logo.drawText(QPoint(start_x + w_agnea, baseline_y), "X")
+    
     painter_logo.end()
     pixmap_logo.save("build/logo.png")
-    print("PNG logo generated successfully.")
+    print("Text-based boot logo generated successfully.")
 except Exception as e:
     print(f"Warning: Failed to generate PNG assets using PySide6: {e}")
 ' || true
