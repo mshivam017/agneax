@@ -6,47 +6,52 @@ echo "=== Packaging Custom Branded Plymouth for Agneax OS ==="
 # Define directories
 BUILD_ROOT="build"
 PKG_DIR="$BUILD_ROOT/package_plymouth"
-SRC_CACHE="$BUILD_ROOT/plymouth_source"
+SRC_CACHE="plymouth-src"
 OUT_DEB="$BUILD_ROOT/agneax-plymouth_1.0.0_amd64.deb"
 
 # Clean up past build files
 rm -rf "$PKG_DIR"
 mkdir -p "$PKG_DIR/DEBIAN"
 
-# 1. Clone upstream Plymouth source code if not cached
+# 1. Verification of local source folder
 if [ ! -d "$SRC_CACHE" ]; then
-  echo "Cloning Plymouth upstream repository..."
-  git clone --depth 1 https://gitlab.freedesktop.org/plymouth/plymouth.git "$SRC_CACHE"
-else
-  echo "Using cached Plymouth upstream repository."
+  echo "Error: local source folder $SRC_CACHE not found! Run git clone or checkout first."
+  exit 1
 fi
 
-# 2. Apply Custom Agneax Branding Patches in Plymouth C Source
-echo "Applying custom patches to Plymouth C source..."
-# Increase default font smoothing hints in graphics drawing if available
-# Force standard layout margins in two-step plugin configurations
-TWO_STEP_SRC="$SRC_CACHE/src/plugins/splash/two-step/two-step.c"
-if [ -f "$TWO_STEP_SRC" ]; then
-  # Set default watermark animation durations to be faster and smoother in C source code
-  sed -i 's/#define DEFAULT_TRANSITION_DURATION 1.0/#define DEFAULT_TRANSITION_DURATION 0.4/g' "$TWO_STEP_SRC"
-  echo "Patched transition duration in two-step.c"
-fi
-
-# 3. Configure and Compile Plymouth on the host
+# 2. Configure and Compile Plymouth on the host using local modified source folder
 cd "$SRC_CACHE"
 echo "Running meson setup..."
-# Configure prefix and libdir to perfectly match Debian Bookworm multiarch paths
+# Configure prefix, libdir, and disable GTK/Docs/Tracing to keep package lightweight and fast.
+# Force default boot splash backgrounds to pure pitch black (0x000000).
 meson setup build \
   --prefix=/usr \
   --libdir=lib/x86_64-linux-gnu \
   -Dlogo=/usr/share/plymouth/themes/spinner/watermark.png \
   -Dudev=true \
+  -Dgtk=disabled \
+  -Ddocs=false \
+  -Dtracing=false \
+  -Dbackground-color=0x000000 \
+  -Dbackground-start-color-stop=0x000000 \
+  -Dbackground-end-color-stop=0x000000 \
   --buildtype=release \
-  --wipe || meson setup build --prefix=/usr --libdir=lib/x86_64-linux-gnu -Dlogo=/usr/share/plymouth/themes/spinner/watermark.png -Dudev=true --buildtype=release
+  --wipe || meson setup build \
+  --prefix=/usr \
+  --libdir=lib/x86_64-linux-gnu \
+  -Dlogo=/usr/share/plymouth/themes/spinner/watermark.png \
+  -Dudev=true \
+  -Dgtk=disabled \
+  -Ddocs=false \
+  -Dtracing=false \
+  -Dbackground-color=0x000000 \
+  -Dbackground-start-color-stop=0x000000 \
+  -Dbackground-end-color-stop=0x000000 \
+  --buildtype=release
 
 echo "Compiling with ninja..."
 ninja -C build
-cd ../..
+cd ..
 
 # 4. Install compiled binaries into Debian package staging folder
 echo "Staging Plymouth binaries for packaging..."
