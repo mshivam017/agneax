@@ -10,9 +10,26 @@ export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 
-exec dbus-run-session -- weston \
+# 1. Try launching Weston with default OpenGL renderer
+echo "Attempting to launch Weston with OpenGL renderer..." > /tmp/weston-start.log
+dbus-run-session -- weston \
   --backend=drm-backend.so \
   --shell=kiosk-shell.so \
   --continue-without-input \
   --log=/tmp/weston.log \
   --startup-cmd="/opt/agneax/desktop/run.sh"
+
+exit_code=$?
+echo "Weston exited with code $exit_code" >> /tmp/weston-start.log
+
+# 2. If it crashed (exit_code != 0), fall back to Pixman software renderer!
+if [ $exit_code -ne 0 ]; then
+  echo "OpenGL failed. Falling back to Pixman software renderer..." >> /tmp/weston-start.log
+  exec dbus-run-session -- weston \
+    --backend=drm-backend.so \
+    --renderer=pixman \
+    --shell=kiosk-shell.so \
+    --continue-without-input \
+    --log=/tmp/weston.log \
+    --startup-cmd="/opt/agneax/desktop/run.sh"
+fi
