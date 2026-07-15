@@ -232,7 +232,7 @@ dbus-run-session -- weston \
   --shell=kiosk-shell.so \
   --continue-without-input \
   --log=/tmp/weston.log \
-  --startup-cmd="/opt/agneax/desktop/run.sh"
+  -- /opt/agneax/desktop/run.sh
 
 exit_code=$?
 echo "Weston exited with code $exit_code" >> /tmp/weston-start.log
@@ -246,7 +246,7 @@ if [ $exit_code -ne 0 ]; then
     --shell=kiosk-shell.so \
     --continue-without-input \
     --log=/tmp/weston.log \
-    --startup-cmd="/opt/agneax/desktop/run.sh"
+    -- /opt/agneax/desktop/run.sh
 fi
 LEOF
 chmod +x /usr/bin/agneax-session-start
