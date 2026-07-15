@@ -25,11 +25,19 @@ echo "Weston exited with code $exit_code" >> /tmp/weston-start.log
 # 2. If it crashed (exit_code != 0), fall back to Pixman software renderer!
 if [ $exit_code -ne 0 ]; then
   echo "OpenGL failed. Falling back to Pixman software renderer..." >> /tmp/weston-start.log
-  exec dbus-run-session -- weston \
+  dbus-run-session -- weston \
     --backend=drm-backend.so \
     --use-pixman \
     --shell=kiosk-shell.so \
     --continue-without-input \
     --log=/tmp/weston.log \
     -- /opt/agneax/desktop/run.sh
+  exit_code=$?
+fi
+
+# 3. If Weston still failed (e.g. no KMS device in VM), fall back to X11 + Openbox!
+if [ $exit_code -ne 0 ]; then
+  echo "Weston compositor failed completely. Launching X11 fallback session..." >> /tmp/weston-start.log
+  export QT_QPA_PLATFORM=xcb
+  exec startx /usr/bin/openbox-session -- /opt/agneax/desktop/run.sh
 fi

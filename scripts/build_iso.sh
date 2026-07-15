@@ -137,7 +137,9 @@ apt-get install -y --no-install-recommends \
   pipewire-audio-client-libraries \
   sudo \
   git \
-  curl
+  curl \
+  xinit \
+  openbox
 
 # Install PySide6 via pip inside the chroot
 pip3 install --break-system-packages PySide6
@@ -240,20 +242,24 @@ echo "Weston exited with code $exit_code" >> /tmp/weston-start.log
 # 2. If it crashed (exit_code != 0), fall back to Pixman software renderer!
 if [ $exit_code -ne 0 ]; then
   echo "OpenGL failed. Falling back to Pixman software renderer..." >> /tmp/weston-start.log
-  exec dbus-run-session -- weston \
+  dbus-run-session -- weston \
     --backend=drm-backend.so \
     --use-pixman \
     --shell=kiosk-shell.so \
     --continue-without-input \
     --log=/tmp/weston.log \
     -- /opt/agneax/desktop/run.sh
+  exit_code=$?
+fi
+
+# 3. If Weston still failed (e.g. no KMS device in VM), fall back to X11 + Openbox!
+if [ $exit_code -ne 0 ]; then
+  echo "Weston compositor failed completely. Launching X11 fallback session..." >> /tmp/weston-start.log
+  export QT_QPA_PLATFORM=xcb
+  exec startx /usr/bin/openbox-session -- /opt/agneax/desktop/run.sh
 fi
 LEOF
 chmod +x /usr/bin/agneax-session-start
-
-# Update initramfs inside chroot to apply zstd compression and hardware drivers
-echo "Regenerating initramfs inside chroot..."
-update-initramfs -u -k all
 
 clean_up() {
   apt-get clean
@@ -387,6 +393,10 @@ cd /opt/agneax/desktop
 python3 main.py >> /tmp/agneax-desktop.log 2>&1
 EOF
 chmod +x "$ROOTFS/opt/agneax/desktop/run.sh"
+
+# Update initramfs inside chroot to apply zstd compression and include the new Plymouth logo
+echo "Regenerating initramfs inside chroot..."
+chroot "$ROOTFS" update-initramfs -u -k all
 
 # Extract Kernel and Initrd from chroot before packaging
 echo "Extracting kernel and initrd..."
