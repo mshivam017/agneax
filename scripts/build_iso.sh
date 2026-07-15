@@ -242,7 +242,7 @@ if [ $exit_code -ne 0 ]; then
   echo "OpenGL failed. Falling back to Pixman software renderer..." >> /tmp/weston-start.log
   exec dbus-run-session -- weston \
     --backend=drm-backend.so \
-    --renderer=pixman \
+    --use-pixman \
     --shell=kiosk-shell.so \
     --continue-without-input \
     --log=/tmp/weston.log \
@@ -300,30 +300,49 @@ chmod +x ./scripts/package_store.sh
 ./scripts/package_store.sh
 
 # Generate PNG wallpaper from SVG vector for GRUB background (Step 2)
-echo "Generating PNG wallpaper for bootloader background..."
+echo "Generating PNG wallpaper and boot logo from SVG vectors..."
 python3 -c '
 try:
     from PySide6.QtGui import QPixmap, QPainter
     from PySide6.QtSvg import QSvgRenderer
     from PySide6.QtCore import QSize
-    renderer = QSvgRenderer("branding/wallpaper.svg")
-    pixmap = QPixmap(QSize(1920, 1080))
-    pixmap.fill()
-    painter = QPainter(pixmap)
-    renderer.render(painter)
-    painter.end()
-    pixmap.save("build/wallpaper.png")
+    
+    # Render Wallpaper
+    renderer_wp = QSvgRenderer("branding/wallpaper.svg")
+    pixmap_wp = QPixmap(QSize(1920, 1080))
+    pixmap_wp.fill()
+    painter_wp = QPainter(pixmap_wp)
+    renderer_wp.render(painter_wp)
+    painter_wp.end()
+    pixmap_wp.save("build/wallpaper.png")
     print("PNG wallpaper generated successfully.")
+    
+    # Render Logo (320x320 for Plymouth center watermark boot logo)
+    renderer_logo = QSvgRenderer("branding/logo.svg")
+    pixmap_logo = QPixmap(QSize(320, 320))
+    pixmap_logo.fill()
+    painter_logo = QPainter(pixmap_logo)
+    renderer_logo.render(painter_logo)
+    painter_logo.end()
+    pixmap_logo.save("build/logo.png")
+    print("PNG logo generated successfully.")
 except Exception as e:
-    print(f"Warning: Failed to generate PNG wallpaper using PySide6: {e}")
+    print(f"Warning: Failed to generate PNG assets using PySide6: {e}")
 ' || true
 
-# Copy generated PNG wallpaper to image and rootfs
+# Copy generated PNG wallpaper and logos
 if [ -f "build/wallpaper.png" ]; then
   mkdir -p "$IMAGE/boot/grub"
   cp "build/wallpaper.png" "$IMAGE/boot/grub/wallpaper.png"
   mkdir -p "$ROOTFS/opt/agneax/branding"
   cp "build/wallpaper.png" "$ROOTFS/opt/agneax/branding/wallpaper.png"
+fi
+
+if [ -f "build/logo.png" ]; then
+  mkdir -p "$ROOTFS/usr/share/plymouth/themes/spinner"
+  cp "build/logo.png" "$ROOTFS/usr/share/plymouth/themes/spinner/watermark.png"
+  mkdir -p "$ROOTFS/usr/share/plymouth"
+  cp "build/logo.png" "$ROOTFS/usr/share/plymouth/debian-logo.png"
 fi
 
 # Install Agneax Store Debian Package (Step 7)
