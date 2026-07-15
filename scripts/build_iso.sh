@@ -183,22 +183,20 @@ fi
 # Overwrite Plymouth spinner theme configurations with explicit Watermark logo mappings
 PLYMOUTH_SPINNER_CONF="/usr/share/plymouth/themes/spinner/spinner.plymouth"
 if [ -f "$PLYMOUTH_SPINNER_CONF" ]; then
-  cat <<'EOF' > "$PLYMOUTH_SPINNER_CONF"
-[Plymouth Theme]
-Name=Spinner
-Description=A theme that features a simple spinner on a dark background.
-ModuleName=two-step
-
-[two-step]
-ImageDir=/usr/share/plymouth/themes/spinner
-HorizontalAlignment=0.5
-VerticalAlignment=0.5
-Transition=fade
-TransitionDuration=0.5
-Watermark=watermark
-WatermarkHorizontalAlignment=0.5
-WatermarkVerticalAlignment=0.42
-EOF
+  echo "[Plymouth Theme]" > "$PLYMOUTH_SPINNER_CONF"
+  echo "Name=Spinner" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "Description=A theme that features a simple spinner on a dark background." >> "$PLYMOUTH_SPINNER_CONF"
+  echo "ModuleName=two-step" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "[two-step]" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "ImageDir=/usr/share/plymouth/themes/spinner" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "HorizontalAlignment=0.5" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "VerticalAlignment=0.5" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "Transition=fade" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "TransitionDuration=0.5" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "Watermark=watermark" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "WatermarkHorizontalAlignment=0.5" >> "$PLYMOUTH_SPINNER_CONF"
+  echo "WatermarkVerticalAlignment=0.42" >> "$PLYMOUTH_SPINNER_CONF"
 fi
 
 # Configure Plymouth status text styling (Phase 4)
