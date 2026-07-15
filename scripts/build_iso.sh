@@ -167,10 +167,29 @@ if [ -f /etc/initramfs-tools/initramfs.conf ]; then
   sed -i 's/COMPRESS=gzip/COMPRESS=zstd/g' /etc/initramfs-tools/initramfs.conf
 fi
 
+# Add early graphics drivers to initramfs configuration (Phase 1)
+echo -e "i915\namdgpu\nnouveau\nvboxvideo\nvmwgfx\nvirtio_gpu" >> /etc/initramfs-tools/modules
+
 # Configure Plymouth default bootloader splash theme (Step 1)
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
   plymouth-set-default-theme -R spinner || true
 fi
+
+# Center Plymouth watermark boot logo (Phase 3)
+PLYMOUTH_SPINNER_CONF="/usr/share/plymouth/themes/spinner/spinner.plymouth"
+if [ -f "$PLYMOUTH_SPINNER_CONF" ]; then
+  sed -i 's/WatermarkHorizontalAlignment=.*/WatermarkHorizontalAlignment=0.5/g' "$PLYMOUTH_SPINNER_CONF"
+  sed -i 's/WatermarkVerticalAlignment=.*/WatermarkVerticalAlignment=0.5/g' "$PLYMOUTH_SPINNER_CONF"
+fi
+
+# Add LightDM hardware wait delay override (Phase 4)
+mkdir -p /etc/systemd/system/lightdm.service.d
+cat <<'LEOF' > /etc/systemd/system/lightdm.service.d/override.conf
+[Service]
+ExecStartPre=/bin/sh -c 'until [ -e /dev/dri/card0 ] || [ -e /dev/fb0 ]; do sleep 0.1; done'
+Restart=always
+RestartSec=2
+LEOF
 
 # Add agneax-core systemd service (Step 3)
 cat <<'LEOF' > /etc/systemd/system/agneax-core.service
@@ -385,10 +404,16 @@ cp -R configs/* "$ROOTFS/" || true
 # Configure startup run script inside rootfs (Step 4 of analysis)
 cat <<'EOF' > "$ROOTFS/opt/agneax/desktop/run.sh"
 #!/usr/bin/env bash
-# Startup script for Agneax Desktop environment inside Weston
-export QT_QPA_PLATFORM=wayland
+# Startup script for Agneax Desktop environment
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
 export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
-export QSG_RENDER_LOOP=threaded
+
+if [ "$QT_QPA_PLATFORM" = "wayland" ]; then
+    export QSG_RENDER_LOOP="${QSG_RENDER_LOOP:-threaded}"
+else
+    export QSG_RENDER_LOOP="${QSG_RENDER_LOOP:-basic}"
+fi
+
 cd /opt/agneax/desktop
 python3 main.py >> /tmp/agneax-desktop.log 2>&1
 EOF
@@ -435,7 +460,7 @@ set menu_color_highlight=black/cyan
 
 menuentry "Agneax OS Live (Standard Mode)" {
     search --set=root --file /live/vmlinuz
-    linux /live/vmlinuz boot=live quiet splash live-media-timeout=15 ---
+    linux /live/vmlinuz boot=live quiet splash loglevel=3 rd.systemd.show_status=false rd.udev.log_level=3 vt.global_cursor_default=0 live-media-timeout=15 ---
     initrd /live/initrd
 }
 
