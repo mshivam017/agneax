@@ -165,7 +165,13 @@ systemctl set-default graphical.target
 # Configure initramfs tools to use zstd compression for faster boot (Step 1)
 if [ -f /etc/initramfs-tools/initramfs.conf ]; then
   sed -i 's/COMPRESS=gzip/COMPRESS=zstd/g' /etc/initramfs-tools/initramfs.conf
+  sed -i 's/MODULES=most/MODULES=dep/g' /etc/initramfs-tools/initramfs.conf
 fi
+
+# Mask blocking early services to speed up boot sequence (Phase 4)
+systemctl mask keyboard-setup.service || true
+systemctl mask console-setup.service || true
+systemctl mask apt-daily.timer apt-daily-upgrade.timer || true
 
 # Add early graphics drivers to initramfs configuration (Phase 1)
 echo -e "i915\namdgpu\nnouveau\nvboxvideo\nvmwgfx\nvirtio_gpu" >> /etc/initramfs-tools/modules
@@ -277,6 +283,31 @@ if [ $exit_code -ne 0 ]; then
 fi
 LEOF
 chmod +x /usr/bin/agneax-session-start
+
+# Phase 1: Set Systemd Default Boot Timeout to 5s
+if [ -f /etc/systemd/system.conf ]; then
+  sed -i 's/#DefaultTimeoutStartSec=90s/DefaultTimeoutStartSec=5s/g' /etc/systemd/system.conf
+  sed -i 's/#DefaultTimeoutStopSec=90s/DefaultTimeoutStopSec=5s/g' /etc/systemd/system.conf
+fi
+
+# Phase 2: Blacklist Legacy Drivers to avoid probing delays
+mkdir -p /etc/modprobe.d
+echo -e "blacklist floppy\nblacklist pcspkr\nblacklist parport\nblacklist parport_pc" > /etc/modprobe.d/agneax-blacklist.conf
+
+# Phase 4: Quiet Sysctl Console Printk & Udev Suppressions
+mkdir -p /etc/sysctl.d
+echo "kernel.printk = 3 3 3 3" > /etc/sysctl.d/99-silent-boot.conf
+if [ -f /etc/udev/udev.conf ]; then
+  sed -i 's/#udev_log="info"/udev_log="err"/g' /etc/udev/udev.conf
+  sed -i 's/udev_log="info"/udev_log="err"/g' /etc/udev/udev.conf
+fi
+
+# Phase 5: Optimized PAM Autologin Pipeline (Bypass Keyring load times)
+if [ -f /etc/pam.d/lightdm-autologin ]; then
+  sed -i 's/^auth[[:space:]]*optional[[:space:]]*pam_gnome_keyring.so/# auth optional pam_gnome_keyring.so/g' /etc/pam.d/lightdm-autologin
+  sed -i 's/^session[[:space:]]*optional[[:space:]]*pam_gnome_keyring.so[[:space:]]*auto_start/# session optional pam_gnome_keyring.so auto_start/g' /etc/pam.d/lightdm-autologin
+  sed -i 's/^session[[:space:]]*optional[[:space:]]*pam_kwallet5.so[[:space:]]*auto_start/# session optional pam_kwallet5.so auto_start/g' /etc/pam.d/lightdm-autologin
+fi
 
 clean_up() {
   apt-get clean
@@ -444,7 +475,7 @@ mksquashfs "$ROOTFS" "$IMAGE/live/filesystem.squashfs" -comp zstd -b 1M -e boot
 echo "Configuring bootloader (GRUB)..."
 cat <<'EOF' > "$IMAGE/boot/grub/grub.cfg"
 set default=0
-set timeout=5
+set timeout=1
 
 insmod ext2
 insmod fat
@@ -458,19 +489,19 @@ set menu_color_highlight=black/cyan
 
 menuentry "Agneax OS Live (Standard Mode)" {
     search --set=root --file /live/vmlinuz
-    linux /live/vmlinuz boot=live quiet splash loglevel=3 rd.systemd.show_status=false rd.udev.log_level=3 vt.global_cursor_default=0 live-media-timeout=15 ---
+    linux /live/vmlinuz boot=live union=overlay quiet splash loglevel=3 rd.systemd.show_status=false rd.udev.log_level=3 vt.global_cursor_default=0 squashfs.threads=0 live-media-timeout=15 ---
     initrd /live/initrd
 }
 
 menuentry "Agneax OS (Safe Graphics Mode)" {
     search --set=root --file /live/vmlinuz
-    linux /live/vmlinuz boot=live nomodeset loglevel=7 live-media-timeout=15 ---
+    linux /live/vmlinuz boot=live union=overlay nomodeset loglevel=7 squashfs.threads=0 live-media-timeout=15 ---
     initrd /live/initrd
 }
 
 menuentry "Agneax OS Debug Console" {
     search --set=root --file /live/vmlinuz
-    linux /live/vmlinuz boot=live systemd.unit=multi-user.target loglevel=7 live-media-timeout=15 ---
+    linux /live/vmlinuz boot=live union=overlay systemd.unit=multi-user.target loglevel=7 squashfs.threads=0 live-media-timeout=15 ---
     initrd /live/initrd
 }
 EOF
