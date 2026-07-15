@@ -60,7 +60,9 @@ jobs:
             libcairo2-dev \
             libudev-dev \
             libevdev-dev \
-            gettext
+            gettext \
+            librsvg2-bin \
+            python3-pil
 
       - name: Build Rust System Daemon (agneax-core)
         run: |

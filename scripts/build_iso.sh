@@ -379,52 +379,59 @@ chmod +x ./scripts/package_store.sh
 
 # Generate PNG wallpaper from SVG vector for GRUB background (Step 2)
 echo "Generating PNG wallpaper and text-based boot logo..."
+rsvg-convert -w 1920 -h 1080 branding/wallpaper.svg -o build/wallpaper.png || echo "Warning: Failed to generate wallpaper PNG using rsvg-convert"
+
 python3 -c '
 try:
-    from PySide6.QtGui import QPixmap, QPainter, QFont, QColor
-    from PySide6.QtSvg import QSvgRenderer
-    from PySide6.QtCore import QSize, Qt, QPoint
-    
-    # Render Wallpaper
-    renderer_wp = QSvgRenderer("branding/wallpaper.svg")
-    pixmap_wp = QPixmap(QSize(1920, 1080))
-    pixmap_wp.fill()
-    painter_wp = QPainter(pixmap_wp)
-    renderer_wp.render(painter_wp)
-    painter_wp.end()
-    pixmap_wp.save("build/wallpaper.png")
-    print("PNG wallpaper generated successfully.")
+    from PIL import Image, ImageDraw, ImageFont
     
     # Render Text-based Boot Logo ("Agnea" in white, "X" in orange)
-    pixmap_logo = QPixmap(QSize(380, 96))
-    pixmap_logo.fill(Qt.transparent)
-    painter_logo = QPainter(pixmap_logo)
-    painter_logo.setRenderHint(QPainter.Antialiasing)
-    painter_logo.setRenderHint(QPainter.TextAntialiasing)
+    img = Image.new("RGBA", (380, 96), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
     
-    font = QFont("Sans-Serif", 36, QFont.Bold)
-    painter_logo.setFont(font)
-    
-    fm = painter_logo.fontMetrics()
-    w_agnea = fm.horizontalAdvance("Agnea")
-    w_x = fm.horizontalAdvance("X")
+    # Try to load DejaVuSans-Bold or fallback to load_default
+    font = None
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+        "DejaVuSans-Bold.ttf"
+    ]
+    for p in font_paths:
+        try:
+            font = ImageFont.truetype(p, 36)
+            break
+        except Exception:
+            continue
+            
+    if font is None:
+        font = ImageFont.load_default()
+        
+    # Get layout widths
+    try:
+        bbox_agnea = draw.textbbox((0, 0), "Agnea", font=font)
+        w_agnea = bbox_agnea[2] - bbox_agnea[0]
+        h_agnea = bbox_agnea[3] - bbox_agnea[1]
+        
+        bbox_x = draw.textbbox((0, 0), "X", font=font)
+        w_x = bbox_x[2] - bbox_x[0]
+    except AttributeError:
+        w_agnea, h_agnea = draw.textsize("Agnea", font=font)
+        w_x, _ = draw.textsize("X", font=font)
+        
     total_w = w_agnea + w_x
     start_x = (380 - total_w) // 2
-    baseline_y = 48 + (fm.ascent() - fm.descent()) // 2
+    start_y = (96 - h_agnea) // 2 - 4
     
     # Draw "Agnea" in White
-    painter_logo.setPen(QColor("#FFFFFF"))
-    painter_logo.drawText(QPoint(start_x, baseline_y), "Agnea")
+    draw.text((start_x, start_y), "Agnea", fill=(255, 255, 255, 255), font=font)
     
-    # Draw "X" in Premium Bright Orange
-    painter_logo.setPen(QColor("#FF6600"))
-    painter_logo.drawText(QPoint(start_x + w_agnea, baseline_y), "X")
+    # Draw "X" in Premium Bright Orange (#FF6600)
+    draw.text((start_x + w_agnea, start_y), "X", fill=(255, 102, 0, 255), font=font)
     
-    painter_logo.end()
-    pixmap_logo.save("build/logo.png")
-    print("Text-based boot logo generated successfully.")
+    img.save("build/logo.png")
+    print("Text-based boot logo generated successfully using Pillow.")
 except Exception as e:
-    print(f"Warning: Failed to generate PNG assets using PySide6: {e}")
+    print(f"Warning: Failed to generate PNG assets using Pillow: {e}")
 ' || true
 
 # Install Agneax Store Debian Package (Step 7)
