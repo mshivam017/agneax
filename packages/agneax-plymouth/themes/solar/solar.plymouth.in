@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=Solar
-Description=Space theme with violent flaring blue star
-ModuleName=space-flares
-
-[space-flares]
-ImageDir=@PLYMOUTH_THEME_PATH@/solar
-ConsoleLogBackgroundColor=0x00000000
