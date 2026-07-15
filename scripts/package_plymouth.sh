@@ -28,7 +28,7 @@ meson setup build \
   --prefix=/usr \
   --libdir=lib/x86_64-linux-gnu \
   -Dlogo=/usr/share/plymouth/themes/spinner/watermark.png \
-  -Dudev=true \
+  -Dudev=enabled \
   -Dgtk=disabled \
   -Ddocs=false \
   -Dtracing=false \
@@ -40,7 +40,7 @@ meson setup build \
   --prefix=/usr \
   --libdir=lib/x86_64-linux-gnu \
   -Dlogo=/usr/share/plymouth/themes/spinner/watermark.png \
-  -Dudev=true \
+  -Dudev=enabled \
   -Dgtk=disabled \
   -Ddocs=false \
   -Dtracing=false \
