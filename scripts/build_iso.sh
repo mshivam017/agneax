@@ -185,7 +185,14 @@ fi
 PLYMOUTH_SPINNER_CONF="/usr/share/plymouth/themes/spinner/spinner.plymouth"
 if [ -f "$PLYMOUTH_SPINNER_CONF" ]; then
   sed -i 's/WatermarkHorizontalAlignment=.*/WatermarkHorizontalAlignment=0.5/g' "$PLYMOUTH_SPINNER_CONF"
-  sed -i 's/WatermarkVerticalAlignment=.*/WatermarkVerticalAlignment=0.5/g' "$PLYMOUTH_SPINNER_CONF"
+  sed -i 's/WatermarkVerticalAlignment=.*/WatermarkVerticalAlignment=0.42/g' "$PLYMOUTH_SPINNER_CONF"
+fi
+
+# Configure Plymouth status text styling (Phase 4)
+PLYMOUTH_SPINNER_SCRIPT="/usr/share/plymouth/themes/spinner/spinner.script"
+if [ -f "$PLYMOUTH_SPINNER_SCRIPT" ]; then
+  sed -i 's/font[[:space:]]*=[[[:space:]]*"[^"]*"/font = "Sans 9"/g' "$PLYMOUTH_SPINNER_SCRIPT"
+  sed -i 's/status_entry.SetColor[[[:space:]]*[^)]*)/status_entry.SetColor(0.62, 0.68, 0.75)/g' "$PLYMOUTH_SPINNER_SCRIPT"
 fi
 
 # Add LightDM hardware wait delay override (Phase 4)
@@ -376,21 +383,21 @@ try:
     print("PNG wallpaper generated successfully.")
     
     # Render Text-based Boot Logo ("Agnea" in white, "X" in orange)
-    pixmap_logo = QPixmap(QSize(512, 128))
+    pixmap_logo = QPixmap(QSize(1024, 256))
     pixmap_logo.fill(Qt.transparent)
     painter_logo = QPainter(pixmap_logo)
     painter_logo.setRenderHint(QPainter.Antialiasing)
     painter_logo.setRenderHint(QPainter.TextAntialiasing)
     
-    font = QFont("Sans-Serif", 48, QFont.Bold)
+    font = QFont("Sans-Serif", 84, QFont.Bold)
     painter_logo.setFont(font)
     
     fm = painter_logo.fontMetrics()
     w_agnea = fm.horizontalAdvance("Agnea")
     w_x = fm.horizontalAdvance("X")
     total_w = w_agnea + w_x
-    start_x = (512 - total_w) // 2
-    baseline_y = 64 + (fm.ascent() - fm.descent()) // 2
+    start_x = (1024 - total_w) // 2
+    baseline_y = 128 + (fm.ascent() - fm.descent()) // 2
     
     # Draw "Agnea" in White
     painter_logo.setPen(QColor("#FFFFFF"))
@@ -420,6 +427,30 @@ if [ -f "build/logo.png" ]; then
   cp "build/logo.png" "$ROOTFS/usr/share/plymouth/themes/spinner/watermark.png"
   mkdir -p "$ROOTFS/usr/share/plymouth"
   cp "build/logo.png" "$ROOTFS/usr/share/plymouth/debian-logo.png"
+  
+  # Colorize Plymouth spinner frames to Agneax Cyan (#00F2FE)
+  echo "Colorizing Plymouth spinner frames to match Agneax branding..."
+  python3 -c '
+from PySide6.QtGui import QImage, QColor
+import glob
+import os
+
+spinner_dir = "'"$ROOTFS"'/usr/share/plymouth/themes/spinner"
+for filepath in glob.glob(os.path.join(spinner_dir, "spinner-*.png")):
+    img = QImage(filepath)
+    if img.isNull():
+        continue
+    for y in range(img.height()):
+        for x in range(img.width()):
+            c = img.pixelColor(x, y)
+            if c.alpha() > 0:
+                c.setRed(0)
+                c.setGreen(242)
+                c.setBlue(254)
+                img.setPixelColor(x, y, c)
+    img.save(filepath)
+print("Plymouth spinner frames colorized successfully.")
+' || true
 fi
 
 # Install Agneax Store Debian Package (Step 7)
