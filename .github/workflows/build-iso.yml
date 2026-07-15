@@ -48,7 +48,17 @@ jobs:
             libegl1-mesa-dev \
             libwayland-dev \
             libx11-dev \
-            libxkbcommon-dev
+            libxkbcommon-dev \
+            meson \
+            ninja-build \
+            xsltproc \
+            docbook-xsl \
+            libdrm-dev \
+            libgbm-dev \
+            libpng-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libudev-dev
 
       - name: Build Rust System Daemon (agneax-core)
         run: |
@@ -70,6 +80,11 @@ jobs:
           cd desktop/cpp_src/build
           cmake ..
           make
+
+      - name: Compile and Package Custom Plymouth
+        run: |
+          chmod +x scripts/package_plymouth.sh
+          ./scripts/package_plymouth.sh
 
       - name: Run ISO Builder Script
         run: |

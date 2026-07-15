@@ -471,6 +471,16 @@ cp "build/agneax-store_1.0.0_amd64.deb" "$ROOTFS/tmp/"
 chroot "$ROOTFS" dpkg -i /tmp/agneax-store_1.0.0_amd64.deb || true
 rm -f "$ROOTFS/tmp/agneax-store_1.0.0_amd64.deb"
 
+# Install Custom Branded Plymouth Package (deep C customizations)
+if [ -f "build/agneax-plymouth_1.0.0_amd64.deb" ]; then
+  echo "Installing custom branded Plymouth package..."
+  cp "build/agneax-plymouth_1.0.0_amd64.deb" "$ROOTFS/tmp/"
+  chroot "$ROOTFS" dpkg -i /tmp/agneax-plymouth_1.0.0_amd64.deb || true
+  rm -f "$ROOTFS/tmp/agneax-plymouth_1.0.0_amd64.deb"
+else
+  echo "Warning: build/agneax-plymouth_1.0.0_amd64.deb not found. Skipping compilation installer fallback."
+fi
+
 # Copy configs (lightdm, network, rules)
 cp -R configs/* "$ROOTFS/" || true
 
