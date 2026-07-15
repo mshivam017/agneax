@@ -38,6 +38,8 @@ tags
 *.bck
 *.string
 *.plymouth
+!themes/text/text.plymouth
+!themes/details/details.plymouth
 *.script.h
 *.service
 *.path
