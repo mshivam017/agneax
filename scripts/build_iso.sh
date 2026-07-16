@@ -496,6 +496,7 @@ cp -r packages/agneax-sddm-theme/* "$ROOTFS/usr/share/sddm/themes/agneax/"
 
 # Copy custom Agneax wallpaper to SDDM theme
 if [ -f "build/wallpaper.png" ]; then
+  mkdir -p "$ROOTFS/usr/share/sddm/themes/agneax/Backgrounds"
   cp "build/wallpaper.png" "$ROOTFS/usr/share/sddm/themes/agneax/Backgrounds/agneax-wallpaper.png"
 fi
 
