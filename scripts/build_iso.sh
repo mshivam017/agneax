@@ -282,7 +282,7 @@ cat <<'LEOF' > /usr/bin/agneax-session-start
 set -u
 
 # Setup Safe Log File
-LOG_FILE="/tmp/agneax-session.log"
+LOG_FILE="/tmp/agneax-session-$(id -u).log"
 echo "=== Agneax Session Startup: $(date) ===" > "$LOG_FILE"
 exec 3>&1 4>&2
 exec 1>>"$LOG_FILE" 2>&1
@@ -357,7 +357,7 @@ else
       --shell=kiosk-shell.so \
       --idle-time=0 \
       --continue-without-input \
-      --log=/tmp/weston.log \
+      --log=/tmp/weston-$(id -u).log \
       -- "$RUN_SCRIPT"
     exit_code=$?
     echo "DRM Weston compositor exited with code $exit_code"
@@ -371,7 +371,7 @@ else
         --shell=kiosk-shell.so \
         --idle-time=0 \
         --continue-without-input \
-        --log=/tmp/weston.log \
+        --log=/tmp/weston-$(id -u).log \
         -- "$RUN_SCRIPT"
       exit_code=$?
       echo "Pixman DRM Weston compositor exited with code $exit_code"
@@ -633,6 +633,12 @@ else
     export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
 fi
 
+# Detect Virtual Machine execution and force software rendering if graphics support is limited
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt -q; then
+    echo "Virtual machine detected. Enabling Qt Quick Software Backend for safety."
+    export QT_QUICK_BACKEND=software
+fi
+
 # Display scaling & HiDPI (Component 2)
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export QT_ENABLE_HIGHDPI_SCALING=1
@@ -654,10 +660,14 @@ else
     export QSG_RENDER_LOOP="${QSG_RENDER_LOOP:-basic}"
 fi
 
+# Setup session cache directory
+mkdir -p ~/.cache/agneax 2>/dev/null
+
 cd /opt/agneax/desktop
-python3 main.py >> /tmp/agneax-desktop.log 2>&1
+python3 main.py >> ~/.cache/agneax/desktop.log 2>&1
 EOF
 chmod +x "$ROOTFS/opt/agneax/desktop/run.sh"
+chroot "$ROOTFS" chown -R agneax:agneax /opt/agneax
 
 # Update initramfs inside chroot to apply zstd compression and include the new Plymouth logo
 echo "Regenerating initramfs inside chroot..."
