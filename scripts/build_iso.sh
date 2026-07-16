@@ -274,23 +274,25 @@ Type=Application
 DesktopNames=Agneax
 LEOF
 
-mkdir -p /usr/share/wayland-sessions
-cp /usr/share/xsessions/agneax.desktop /usr/share/wayland-sessions/agneax.desktop
-
 cat <<'LEOF' > /usr/bin/agneax-session-start
 #!/usr/bin/env bash
-# Start Weston compositor natively on Wayland DRM backend with nested X11 fallback
+# Start Weston compositor or native X11 session directly depending on environment
 set -u
 
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 
-exit_code=1
+echo "=== Agneax Session Startup: $(date) ===" > /tmp/agneax-session.log
 
-if [ -z "${DISPLAY:-}" ]; then
-  # 1. Try launching Weston natively on Wayland DRM backend
-  echo "Attempting to launch native DRM Weston with OpenGL..." > /tmp/weston-start.log
+if [ -n "${DISPLAY:-}" ]; then
+  echo "X11 DISPLAY detected ($DISPLAY). Running desktop shell natively on X11..." >> /tmp/agneax-session.log
+  if command -v openbox >/dev/null 2>&1; then
+    openbox &
+  fi
+  exec /opt/agneax/desktop/run.sh
+else
+  echo "No X11 DISPLAY. Attempting to start native DRM Weston compositor..." >> /tmp/agneax-session.log
   weston \
     --backend=drm-backend.so \
     --shell=kiosk-shell.so \
@@ -299,11 +301,10 @@ if [ -z "${DISPLAY:-}" ]; then
     --log=/tmp/weston.log \
     -- /opt/agneax/desktop/run.sh
   exit_code=$?
-  echo "Native DRM Weston exited with code $exit_code" >> /tmp/weston-start.log
+  echo "DRM Weston exited with code $exit_code" >> /tmp/agneax-session.log
 
-  # 2. Fallback to native DRM Weston with Pixman software renderer
   if [ $exit_code -ne 0 ]; then
-    echo "OpenGL failed. Falling back to native DRM Weston with Pixman..." >> /tmp/weston-start.log
+    echo "OpenGL failed. Falling back to native DRM Weston with Pixman..." >> /tmp/agneax-session.log
     weston \
       --backend=drm-backend.so \
       --use-pixman \
@@ -313,44 +314,20 @@ if [ -z "${DISPLAY:-}" ]; then
       --log=/tmp/weston.log \
       -- /opt/agneax/desktop/run.sh
     exit_code=$?
-    echo "DRM Pixman Weston exited with code $exit_code" >> /tmp/weston-start.log
   fi
-else
-  # 1. Try launching Weston nested on X11 backend with OpenGL
-  echo "X11 DISPLAY detected. Attempting to launch nested X11 Weston..." > /tmp/weston-start.log
-  weston \
-    --backend=x11-backend.so \
-    --shell=kiosk-shell.so \
-    --idle-time=0 \
-    --continue-without-input \
-    --log=/tmp/weston.log \
-    -- /opt/agneax/desktop/run.sh
-  exit_code=$?
-  echo "Nested X11 Weston exited with code $exit_code" >> /tmp/weston-start.log
 
-  # 2. Fallback to nested X11 Weston with Pixman software renderer
   if [ $exit_code -ne 0 ]; then
-    echo "OpenGL failed. Falling back to nested X11 Weston with Pixman..." >> /tmp/weston-start.log
-    weston \
-      --backend=x11-backend.so \
-      --use-pixman \
-      --shell=kiosk-shell.so \
-      --idle-time=0 \
-      --continue-without-input \
-      --log=/tmp/weston.log \
-      -- /opt/agneax/desktop/run.sh
-    exit_code=$?
-    echo "Nested X11 Pixman Weston exited with code $exit_code" >> /tmp/weston-start.log
+    echo "Weston failed completely. Starting fallback X11 session..." >> /tmp/agneax-session.log
+    if command -v startx >/dev/null 2>&1; then
+      exec startx /opt/agneax/desktop/run.sh -- :0 vt7
+    else
+      export DISPLAY=:0
+      if command -v openbox >/dev/null 2>&1; then
+        openbox &
+      fi
+      exec /opt/agneax/desktop/run.sh
+    fi
   fi
-fi
-
-# 3. Ultimate fallback: launch python desktop shell natively on X11 with Openbox
-if [ $exit_code -ne 0 ]; then
-  echo "Weston compositing failed completely. Launching fallback X11 Openbox session..." >> /tmp/weston-start.log
-  export DISPLAY="${DISPLAY:-:0}"
-  export QT_QPA_PLATFORM=xcb
-  openbox &
-  exec /opt/agneax/desktop/run.sh
 fi
 LEOF
 chmod +x /usr/bin/agneax-session-start
