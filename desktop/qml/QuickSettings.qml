@@ -101,6 +101,14 @@ Rectangle {
                 icon: "👁️"
                 active: false
             }
+
+            // Tablet Mode Toggle (Convergence)
+            QSToggleButton {
+                label: "Tablet Mode"
+                icon: "📱"
+                active: root.isTabletMode
+                onClicked: root.isTabletMode = !root.isTabletMode
+            }
         }
 
         // Sliders Section (Volume and Brightness)

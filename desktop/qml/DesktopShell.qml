@@ -19,6 +19,21 @@ ApplicationWindow {
     property string textSecondaryColor: isDarkMode ? "#A0AEC0" : "#718096"
     property string cardBgColor: isDarkMode ? "rgba(45, 55, 72, 0.5)" : "rgba(247, 250, 252, 0.8)"
     property string borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)"
+    property bool isTabletMode: false
+
+    // Shared list of available system applications
+    property var appsList: [
+        {"name": "File Manager", "icon": "📁", "id": "file-manager", "category": "System"},
+        {"name": "Terminal", "icon": "🐚", "id": "terminal", "category": "System"},
+        {"name": "Control Center", "icon": "⚙️", "id": "control-center", "category": "System"},
+        {"name": "App Store", "icon": "🛍️", "id": "store", "category": "System"},
+        {"name": "Install Agneax OS", "icon": "💾", "id": "installer", "category": "System"},
+        {"name": "Web Browser", "icon": "🌐", "id": "firefox", "category": "Internet"},
+        {"name": "Text Editor", "icon": "📝", "id": "gedit", "category": "Office"},
+        {"name": "Calculator", "icon": "🧮", "id": "gnome-calculator", "category": "Utilities"},
+        {"name": "System Monitor", "icon": "📈", "id": "gnome-system-monitor", "category": "System"},
+        {"name": "Media Player", "icon": "🎬", "id": "vlc", "category": "Multimedia"}
+    ]
 
     // Open/Close triggers for Panels
     property bool startMenuOpen: false
@@ -109,7 +124,14 @@ ApplicationWindow {
         anchors.bottom: root.taskbarLayout == "Panel" ? panel.top : parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottomMargin: root.taskbarLayout == "Panel" ? 12 : 20
-        visible: root.startMenuOpen
+        visible: root.startMenuOpen && !root.isTabletMode
+    }
+
+    // Full-Screen Apps Overview Grid Drawer (Convergence Mode)
+    AppsOverview {
+        id: appsOverview
+        anchors.fill: parent
+        visible: root.startMenuOpen && root.isTabletMode
     }
 
     // Glassmorphic Quick Settings Overlay
@@ -329,6 +351,10 @@ ApplicationWindow {
         }
         if (event.key === Qt.Key_T && (event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.AltModifier)) {
             systemBridge.launchApp("terminal");
+            event.accepted = true;
+        }
+        if (event.key === Qt.Key_T && (event.modifiers & Qt.MetaModifier)) {
+            root.isTabletMode = !root.isTabletMode;
             event.accepted = true;
         }
         if (event.key === Qt.Key_W && (event.modifiers & Qt.MetaModifier)) {

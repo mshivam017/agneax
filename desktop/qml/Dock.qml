@@ -10,6 +10,8 @@ Rectangle {
     border.width: 1
     radius: 20
 
+    property int hoveredIndex: -1
+
     // Inner glow
     Rectangle {
         anchors.fill: parent
@@ -24,10 +26,10 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 14
 
-        DockItem { iconText: "🌐"; tooltip: "Firefox Browser"; onClicked: systemBridge.launchApp("firefox") }
-        DockItem { iconText: "📁"; tooltip: "Files"; onClicked: systemBridge.launchApp("file-manager") }
-        DockItem { iconText: "🐚"; tooltip: "Console"; onClicked: systemBridge.launchApp("terminal") }
-        DockItem { iconText: "🛍️"; tooltip: "App Hub"; onClicked: systemBridge.launchApp("store") }
-        DockItem { iconText: "⚙️"; tooltip: "Settings"; onClicked: systemBridge.launchApp("control-center") }
+        DockItem { itemIndex: 0; iconText: "🌐"; tooltip: "Firefox Browser"; onClicked: systemBridge.launchApp("firefox") }
+        DockItem { itemIndex: 1; iconText: "📁"; tooltip: "Files"; onClicked: systemBridge.launchApp("file-manager") }
+        DockItem { itemIndex: 2; iconText: "🐚"; tooltip: "Console"; onClicked: systemBridge.launchApp("terminal") }
+        DockItem { itemIndex: 3; iconText: "🛍️"; tooltip: "App Hub"; onClicked: systemBridge.launchApp("store") }
+        DockItem { itemIndex: 4; iconText: "⚙️"; tooltip: "Settings"; onClicked: systemBridge.launchApp("control-center") }
     }
 }

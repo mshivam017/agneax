@@ -8,6 +8,7 @@ Item {
 
     property string iconText: "📁"
     property string tooltip: "App"
+    property int itemIndex: -1
     signal clicked()
 
     MouseArea {
@@ -15,17 +16,41 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         onClicked: rootItem.clicked()
+        onContainsMouseChanged: {
+            if (parent && parent.parent) {
+                if (containsMouse) {
+                    parent.parent.hoveredIndex = itemIndex;
+                } else if (parent.parent.hoveredIndex === itemIndex) {
+                    parent.parent.hoveredIndex = -1;
+                }
+            }
+        }
     }
 
-    // Zoom and jump effects on hover
-    scale: mouseArea.containsMouse ? 1.35 : 1.0
-    y: mouseArea.containsMouse ? -8 : 0
+    // Proximity magnification curve calculation
+    scale: {
+        if (parent && parent.parent && parent.parent.hoveredIndex !== -1) {
+            var diff = Math.abs(parent.parent.hoveredIndex - itemIndex);
+            if (diff === 0) return 1.35;
+            if (diff === 1) return 1.15;
+        }
+        return 1.0;
+    }
+
+    y: {
+        if (parent && parent.parent && parent.parent.hoveredIndex !== -1) {
+            var diff = Math.abs(parent.parent.hoveredIndex - itemIndex);
+            if (diff === 0) return -12;
+            if (diff === 1) return -6;
+        }
+        return 0;
+    }
 
     Behavior on scale {
-        NumberAnimation { duration: 150; easing.type: Easing.OutBack }
+        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
     }
     Behavior on y {
-        NumberAnimation { duration: 150; easing.type: Easing.OutBack }
+        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
     }
 
     // Graphical Circle

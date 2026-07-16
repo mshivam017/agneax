@@ -438,6 +438,17 @@ class SystemBridge(QObject):
         return ""
 
 def main():
+    # Redirect logs to ~/.cache/agneax/session.log for diagnostic tracing (Step 5.2)
+    try:
+        log_dir = os.path.expanduser("~/.cache/agneax")
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = open(os.path.join(log_dir, "session.log"), "w", buffering=1)
+        sys.stdout = log_file
+        sys.stderr = log_file
+        print("=== Agneax OS Desktop Session Started ===")
+    except Exception as e:
+        sys.__stdout__.write(f"Failed to initialize session logging: {e}\n")
+
     app = QApplication(sys.argv)
     app.setApplicationName("Agneax Desktop")
     app.setOrganizationName("Agneax")

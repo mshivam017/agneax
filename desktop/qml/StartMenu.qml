@@ -22,18 +22,7 @@ Rectangle {
     }
 
     // List of available system applications
-    property var appsList: [
-        {"name": "File Manager", "icon": "📁", "id": "file-manager", "category": "System"},
-        {"name": "Terminal", "icon": "🐚", "id": "terminal", "category": "System"},
-        {"name": "Control Center", "icon": "⚙️", "id": "control-center", "category": "System"},
-        {"name": "App Store", "icon": "🛍️", "id": "store", "category": "System"},
-        {"name": "Install Agneax OS", "icon": "💾", "id": "installer", "category": "System"},
-        {"name": "Web Browser", "icon": "🌐", "id": "firefox", "category": "Internet"},
-        {"name": "Text Editor", "icon": "📝", "id": "gedit", "category": "Office"},
-        {"name": "Calculator", "icon": "🧮", "id": "gnome-calculator", "category": "Utilities"},
-        {"name": "System Monitor", "icon": "📈", "id": "gnome-system-monitor", "category": "System"},
-        {"name": "Media Player", "icon": "🎬", "id": "vlc", "category": "Multimedia"}
-    ]
+    property var appsList: root.appsList
 
     ColumnLayout {
         anchors.fill: parent
