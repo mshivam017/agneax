@@ -128,6 +128,12 @@ ApplicationWindow {
         anchors.bottomMargin: root.taskbarLayout == "Panel" ? 12 : 20
         visible: root.startMenuOpen && !root.isTabletMode
         appsList: root.appsList
+        glassBgColor: root.glassBgColor
+        borderColor: root.borderColor
+        textPrimaryColor: root.textPrimaryColor
+        textSecondaryColor: root.textSecondaryColor
+        onLockRequested: root.isLocked = true
+        onCloseRequested: root.startMenuOpen = false
     }
 
     // Full-Screen Apps Overview Grid Drawer (Convergence Mode)

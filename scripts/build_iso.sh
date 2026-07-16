@@ -423,6 +423,12 @@ cp -R control-center/* "$ROOTFS/opt/agneax/control-center/" || true
 cp -R installer/* "$ROOTFS/opt/agneax/installer/" || true
 cp -R branding/* "$ROOTFS/opt/agneax/branding/" || true
 
+# Copy complete maui-shell source code for reference and developer customization
+echo "Copying complete maui-shell source code into rootfs..."
+mkdir -p "$ROOTFS/opt/agneax/maui-shell-src"
+cp -R maui-shell-src/* "$ROOTFS/opt/agneax/maui-shell-src/" || true
+rm -rf "$ROOTFS/opt/agneax/maui-shell-src/.git"
+
 # Package the Agneax Store from local source dynamically (Step 5 of analysis)
 echo "Packaging Agneax Store dynamically from current workspace sources..."
 chmod +x ./scripts/package_store.sh

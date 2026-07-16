@@ -6,8 +6,17 @@ Rectangle {
     id: rootMenu
     width: 480
     height: 520
-    color: root.glassBgColor
-    border.color: root.borderColor
+    
+    property color glassBgColor: "rgba(10, 12, 18, 0.7)"
+    property color borderColor: "rgba(255, 255, 255, 0.1)"
+    property color textPrimaryColor: "#FFFFFF"
+    property color textSecondaryColor: "#888888"
+    
+    signal lockRequested()
+    signal closeRequested()
+    
+    color: glassBgColor
+    border.color: borderColor
     border.width: 1
     radius: 16
 
@@ -183,13 +192,13 @@ Rectangle {
                             font.pixelSize: 12
                             font.bold: true
                             font.family: "Segoe UI, Inter"
-                            color: root.textPrimaryColor
+                            color: rootMenu.textPrimaryColor
                         }
                         Text {
                             text: "Standard Account"
                             font.pixelSize: 9
                             font.family: "Segoe UI, Inter"
-                            color: root.textSecondaryColor
+                            color: rootMenu.textSecondaryColor
                         }
                     }
                 }
@@ -206,8 +215,8 @@ Rectangle {
                         text: "🔒"
                         font.pixelSize: 14
                         onClicked: {
-                            root.isLocked = true
-                            root.startMenuOpen = false
+                            rootMenu.lockRequested()
+                            rootMenu.closeRequested()
                         }
                     }
                     Button {
@@ -216,7 +225,7 @@ Rectangle {
                         font.pixelSize: 14
                         onClicked: {
                             console.log("Rebooting")
-                            root.startMenuOpen = false
+                            rootMenu.closeRequested()
                         }
                     }
                     Button {
@@ -225,7 +234,7 @@ Rectangle {
                         font.pixelSize: 14
                         onClicked: {
                             console.log("Shutting down")
-                            root.startMenuOpen = false
+                            rootMenu.closeRequested()
                             Qt.quit()
                         }
                     }
