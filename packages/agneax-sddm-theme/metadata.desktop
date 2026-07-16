@@ -1,0 +1,14 @@
+[SddmGreeterTheme]
+Name=Agneax Greeter
+Description=Premium glassmorphic login interface for Agneax OS
+Author=Agneax Team
+Copyright=Copyright (C) 2026 Agneax OS
+License=GPL-3.0-or-later
+Type=sddm-theme
+Version=1.0.0
+Website=https://github.com/mshivam017/agneax
+Screenshot=Backgrounds/agneax-wallpaper.png
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=agneax
+Theme-API=2.11

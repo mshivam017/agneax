@@ -241,7 +241,7 @@ systemctl enable agneax-core
 # Set up autostart and theme for SDDM
 cat <<'LEOF' > /etc/sddm.conf
 [Theme]
-Current=sugar-candy
+Current=agneax
 
 [Autologin]
 User=agneax
@@ -489,14 +489,14 @@ print("Plymouth spinner frames colorized successfully.")
 ' || true
 fi
 
-# Integrate custom branded SDDM sugar-candy theme from local packages
-echo "Integrating custom branded SDDM sugar-candy theme..."
-mkdir -p "$ROOTFS/usr/share/sddm/themes/sugar-candy"
-cp -r packages/sddm-sugar-candy/* "$ROOTFS/usr/share/sddm/themes/sugar-candy/"
+# Integrate custom branded SDDM agneax theme from local packages
+echo "Integrating custom branded SDDM agneax theme..."
+mkdir -p "$ROOTFS/usr/share/sddm/themes/agneax"
+cp -r packages/agneax-sddm-theme/* "$ROOTFS/usr/share/sddm/themes/agneax/"
 
 # Copy custom Agneax wallpaper to SDDM theme
 if [ -f "build/wallpaper.png" ]; then
-  cp "build/wallpaper.png" "$ROOTFS/usr/share/sddm/themes/sugar-candy/Backgrounds/agneax-wallpaper.png"
+  cp "build/wallpaper.png" "$ROOTFS/usr/share/sddm/themes/agneax/Backgrounds/agneax-wallpaper.png"
 fi
 
 # Copy configs (lightdm, network, rules)
