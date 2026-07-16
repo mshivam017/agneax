@@ -276,59 +276,138 @@ LEOF
 
 cat <<'LEOF' > /usr/bin/agneax-session-start
 #!/usr/bin/env bash
-# Start Weston compositor or native X11 session directly depending on environment
+# Agneax OS Desktop Session Startup Script (Robust Exception Handled)
 set -u
 
-export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-mkdir -p "$XDG_RUNTIME_DIR"
-chmod 700 "$XDG_RUNTIME_DIR"
+# Setup Safe Log File
+LOG_FILE="/tmp/agneax-session.log"
+echo "=== Agneax Session Startup: $(date) ===" > "$LOG_FILE"
+exec 3>&1 4>&2
+exec 1>>"$LOG_FILE" 2>&1
 
-echo "=== Agneax Session Startup: $(date) ===" > /tmp/agneax-session.log
+echo "User: $(whoami) (UID: $(id -u))"
+echo "Environment DISPLAY: ${DISPLAY:-None}"
+
+# Robust XDG_RUNTIME_DIR Setup (Fallback to /tmp if needed)
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+if ! mkdir -p "$XDG_RUNTIME_DIR" 2>/dev/null || ! chmod 700 "$XDG_RUNTIME_DIR" 2>/dev/null; then
+  echo "Warning: Failed to create or secure $XDG_RUNTIME_DIR. Using fallback in /tmp."
+  export XDG_RUNTIME_DIR="/tmp/xdg-runtime-$(id -u)"
+  mkdir -p "$XDG_RUNTIME_DIR" 2>/dev/null
+  chmod 700 "$XDG_RUNTIME_DIR" 2>/dev/null
+fi
+
+# Clean up stale Wayland sockets to avoid launch conflicts
+rm -f "$XDG_RUNTIME_DIR/wayland-*"
+
+# Ensure DBus Session Bus is active
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+  echo "Starting private DBus session bus..."
+  if command -v dbus-launch >/dev/null 2>&1; then
+    eval $(dbus-launch --sh-syntax --exit-with-session)
+  else
+    echo "Warning: dbus-launch not found. DBus communication might fail."
+  fi
+fi
+
+# Verify Target Execution Script
+RUN_SCRIPT="/opt/agneax/desktop/run.sh"
+if [ ! -x "$RUN_SCRIPT" ]; then
+  echo "Error: Run script $RUN_SCRIPT not found or not executable. Trying python main.py fallback."
+  if [ -f "/opt/agneax/desktop/main.py" ]; then
+    cat <<'EOF' > /tmp/agneax-fallback-run.sh
+#!/usr/bin/env bash
+cd /opt/agneax/desktop
+python3 main.py
+EOF
+    chmod +x /tmp/agneax-fallback-run.sh
+    RUN_SCRIPT="/tmp/agneax-fallback-run.sh"
+  else
+    echo "Fatal: No desktop shell modules found! Falling back to safe terminal shell."
+    if command -v xterm >/dev/null 2>&1; then
+      exec xterm -geometry 80x24+100+100 -hold -e "echo 'Agneax desktop shell files are missing! Check /opt/agneax/desktop/'; bash"
+    else
+      sleep 10
+      exit 1
+    fi
+  fi
+fi
+
+# Core Session Launch Logic
+exit_code=1
 
 if [ -n "${DISPLAY:-}" ]; then
-  echo "X11 DISPLAY detected ($DISPLAY). Running desktop shell natively on X11..." >> /tmp/agneax-session.log
+  echo "X11 DISPLAY detected ($DISPLAY). Running desktop shell natively on X11..."
   if command -v openbox >/dev/null 2>&1; then
+    echo "Starting openbox window manager..."
     openbox &
   fi
-  exec /opt/agneax/desktop/run.sh
-else
-  echo "No X11 DISPLAY. Attempting to start native DRM Weston compositor..." >> /tmp/agneax-session.log
-  weston \
-    --backend=drm-backend.so \
-    --shell=kiosk-shell.so \
-    --idle-time=0 \
-    --continue-without-input \
-    --log=/tmp/weston.log \
-    -- /opt/agneax/desktop/run.sh
+  "$RUN_SCRIPT"
   exit_code=$?
-  echo "DRM Weston exited with code $exit_code" >> /tmp/agneax-session.log
-
-  if [ $exit_code -ne 0 ]; then
-    echo "OpenGL failed. Falling back to native DRM Weston with Pixman..." >> /tmp/agneax-session.log
+  echo "Desktop shell exited with code $exit_code"
+else
+  # Native compositor mode (Wayland DRM)
+  echo "No X11 DISPLAY. Attempting to start native DRM Weston compositor..."
+  if command -v weston >/dev/null 2>&1; then
     weston \
       --backend=drm-backend.so \
-      --use-pixman \
       --shell=kiosk-shell.so \
       --idle-time=0 \
       --continue-without-input \
       --log=/tmp/weston.log \
-      -- /opt/agneax/desktop/run.sh
+      -- "$RUN_SCRIPT"
     exit_code=$?
+    echo "DRM Weston compositor exited with code $exit_code"
+
+    # Fallback to DRM with Software Rendering (Pixman)
+    if [ $exit_code -ne 0 ]; then
+      echo "OpenGL failed. Falling back to native DRM Weston with Pixman software renderer..."
+      weston \
+        --backend=drm-backend.so \
+        --use-pixman \
+        --shell=kiosk-shell.so \
+        --idle-time=0 \
+        --continue-without-input \
+        --log=/tmp/weston.log \
+        -- "$RUN_SCRIPT"
+      exit_code=$?
+      echo "Pixman DRM Weston compositor exited with code $exit_code"
+    fi
+  else
+    echo "Warning: weston is not installed!"
   fi
 
+  # Fallback to local X server if compositor failed completely
   if [ $exit_code -ne 0 ]; then
-    echo "Weston failed completely. Starting fallback X11 session..." >> /tmp/agneax-session.log
+    echo "Weston failed completely. Starting fallback local Xorg server..."
     if command -v startx >/dev/null 2>&1; then
-      exec startx /opt/agneax/desktop/run.sh -- :0 vt7
+      startx "$RUN_SCRIPT" -- :0 vt7
+      exit_code=$?
     else
+      echo "startx not available. Trying manual Xorg server initialization..."
       export DISPLAY=:0
-      if command -v openbox >/dev/null 2>&1; then
-        openbox &
+      if command -v Xorg >/dev/null 2>&1; then
+        Xorg :0 vt7 -nofreevt -novtswitch &
+        sleep 1
+        if command -v openbox >/dev/null 2>&1; then
+          openbox &
+        fi
+        "$RUN_SCRIPT"
+        exit_code=$?
+      else
+        echo "Fatal: No display servers or compositors could be initialized!"
       fi
-      exec /opt/agneax/desktop/run.sh
     fi
   fi
 fi
+
+# Anti-Loop Protection (If session exited too fast, sleep to prevent CPU hogging)
+if [ $exit_code -ne 0 ]; then
+  echo "Session terminated abnormally with code $exit_code. Initiating anti-loop delay."
+  sleep 5
+fi
+
+exit $exit_code
 LEOF
 chmod +x /usr/bin/agneax-session-start
 
