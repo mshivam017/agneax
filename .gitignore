@@ -31,3 +31,6 @@ Thumbs.db
 
 # Plymouth build artifacts
 /packages/agneax-plymouth/build/
+
+# Cloned analysis sources
+/maui-shell-src/
