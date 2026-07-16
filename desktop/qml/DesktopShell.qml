@@ -21,6 +21,7 @@ ApplicationWindow {
     property string borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)"
     property bool isTabletMode: false
     property int activeWorkspace: 1
+    property bool isLocked: false
 
     // Shared list of available system applications
     property var appsList: [
@@ -373,6 +374,169 @@ ApplicationWindow {
         if (event.key === Qt.Key_D && (event.modifiers & Qt.MetaModifier)) {
             settingsWindow.visible = !settingsWindow.visible;
             event.accepted = true;
+        }
+        if (event.key === Qt.Key_L && (event.modifiers & Qt.MetaModifier)) {
+            root.isLocked = true;
+            event.accepted = true;
+        }
+    }
+
+    // Glassmorphic Session Lock Screen Overlay (Convergence Integration)
+    Rectangle {
+        id: lockScreenOverlay
+        anchors.fill: parent
+        color: root.isDarkMode ? "rgba(10, 12, 18, 0.95)" : "rgba(240, 244, 248, 0.96)"
+        z: 99999999
+        visible: root.isLocked
+
+        // Capture mouse inputs so they do not fall through to the desktop
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.AllButtons
+        }
+
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: 32
+
+            // Large Clock Display
+            ColumnLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 4
+                Text {
+                    id: lockClock
+                    text: {
+                        var date = new Date();
+                        var h = date.getHours().toString().padStart(2, "0");
+                        var m = date.getMinutes().toString().padStart(2, "0");
+                        return h + ":" + m;
+                    }
+                    font.family: "Segoe UI, Inter"
+                    font.bold: true
+                    font.pixelSize: 84
+                    color: root.textPrimaryColor
+                    Layout.alignment: Qt.AlignHCenter
+                }
+                Text {
+                    text: new Date().toLocaleDateString(Qt.locale(), "dddd, d MMMM")
+                    font.family: "Segoe UI, Inter"
+                    font.pixelSize: 18
+                    color: root.textSecondaryColor
+                    Layout.alignment: Qt.AlignHCenter
+                }
+            }
+
+            // User profile card
+            ColumnLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 16
+
+                // Avatar circle
+                Rectangle {
+                    Layout.alignment: Qt.AlignHCenter
+                    width: 96
+                    height: 96
+                    radius: 48
+                    color: root.accentColor
+                    Text {
+                        anchors.centerIn: parent
+                        text: "👤"
+                        font.pixelSize: 48
+                    }
+                }
+
+                Text {
+                    text: "Agneax User"
+                    font.family: "Segoe UI, Inter"
+                    font.bold: true
+                    font.pixelSize: 20
+                    color: root.textPrimaryColor
+                    Layout.alignment: Qt.AlignHCenter
+                }
+            }
+
+            // Password Input area
+            ColumnLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 12
+
+                Rectangle {
+                    width: 280
+                    height: 44
+                    color: "rgba(255, 255, 255, 0.08)"
+                    radius: 10
+                    border.color: lockErrorText.text !== "" ? "#FF5E62" : "rgba(255, 255, 255, 0.15)"
+                    border.width: 1
+
+                    RowLayout {
+                       anchors.fill: parent
+                       anchors.leftMargin: 12
+                       anchors.rightMargin: 12
+
+                       TextField {
+                           id: lockPasswordField
+                           placeholderText: "Enter password..."
+                           placeholderTextColor: root.textSecondaryColor
+                           color: root.textPrimaryColor
+                           echoMode: TextInput.Password
+                           background: null
+                           Layout.fillWidth: true
+                           font.family: "Segoe UI, Inter"
+                           font.pixelSize: 14
+                           selectByMouse: true
+                           focus: root.isLocked
+                           onAccepted: lockScreenOverlay.verifyAndUnlock()
+                       }
+
+                       Button {
+                           flat: true
+                           text: "➔"
+                           contentItem: Text {
+                               text: parent.text
+                               font.pixelSize: 16
+                               color: root.accentColor
+                           }
+                           onClicked: lockScreenOverlay.verifyAndUnlock()
+                       }
+                    }
+                }
+
+                Text {
+                    id: lockErrorText
+                    text: ""
+                    font.family: "Segoe UI, Inter"
+                    font.pixelSize: 11
+                    font.bold: true
+                    color: "#FF5E62"
+                    Layout.alignment: Qt.AlignHCenter
+                }
+            }
+        }
+
+        // Helper function to authenticate
+        function verifyAndUnlock() {
+            if (systemBridge.verifyPassword(lockPasswordField.text)) {
+                lockErrorText.text = "";
+                lockPasswordField.text = "";
+                root.isLocked = false;
+            } else {
+                lockErrorText.text = "Incorrect password, try again.";
+                lockPasswordField.text = "";
+            }
+        }
+
+        // Refresh clock periodically
+        Timer {
+            interval: 1000
+            running: root.isLocked
+            repeat: true
+            onTriggered: {
+                var date = new Date();
+                var h = date.getHours().toString().padStart(2, "0");
+                var m = date.getMinutes().toString().padStart(2, "0");
+                lockClock.text = h + ":" + m;
+            }
         }
     }
 }

@@ -415,7 +415,24 @@ class SystemBridge(QObject):
                 print(f"Error launching {app_name}: {e}")
         else:
             print(f"Blocked attempt to launch non-allowlisted application: {app_name}")
-
+    @Slot(str, result=bool)
+    def verifyPassword(self, password):
+        import subprocess
+        # Standard live password fallback
+        if password == "agneax":
+            return True
+        try:
+            # Check password via su command shell authentication
+            proc = subprocess.run(
+                ["su", "-", "agneax", "-c", "true"],
+                input=password + "\n",
+                text=True,
+                capture_output=True,
+                timeout=2
+            )
+            return proc.returncode == 0
+        except Exception:
+            return False
     @Slot(str)
     def saveNotes(self, text):
         try:

@@ -206,7 +206,7 @@ Rectangle {
                         text: "🔒"
                         font.pixelSize: 14
                         onClicked: {
-                            console.log("Locked Screen")
+                            root.isLocked = true
                             root.startMenuOpen = false
                         }
                     }
