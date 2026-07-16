@@ -20,6 +20,7 @@ ApplicationWindow {
     property string cardBgColor: isDarkMode ? "rgba(45, 55, 72, 0.5)" : "rgba(247, 250, 252, 0.8)"
     property string borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)"
     property bool isTabletMode: false
+    property int activeWorkspace: 1
 
     // Shared list of available system applications
     property var appsList: [

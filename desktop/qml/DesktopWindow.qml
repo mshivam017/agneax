@@ -15,7 +15,11 @@ Rectangle {
     property string windowTitle: "Application"
     property string iconText: "📄"
     property bool isMaximized: false
+    property bool isMinimized: false
+    property int workspaceIndex: root.activeWorkspace
     property var previousGeometry: ({"x": 100, "y": 100, "width": 640, "height": 400})
+
+    visible: !isMinimized && root.activeWorkspace === workspaceIndex
 
     // Snapping indicator targets
     signal windowSnapped(int direction) // 1=Left, 2=Right, 7=Fullscreen
@@ -51,20 +55,41 @@ Rectangle {
 
             // Window Controls (Minimize, Maximize, Close)
             Row {
+                id: controlsRow
                 spacing: 8
                 Layout.alignment: Qt.AlignRight
+
+                property bool hovered: false
 
                 // Minimize
                 Rectangle {
                     width: 12; height: 12; radius: 6; color: "#FFDF00"
+                    Text {
+                        anchors.centerIn: parent
+                        text: "─"
+                        font.pixelSize: 8
+                        font.bold: true
+                        color: "#5C4D00"
+                        opacity: controlsRow.hovered ? 1.0 : 0.0
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                    }
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: windowRoot.visible = false
+                        onClicked: windowRoot.isMinimized = true
                     }
                 }
                 // Maximize
                 Rectangle {
                     width: 12; height: 12; radius: 6; color: "#00F2FE"
+                    Text {
+                        anchors.centerIn: parent
+                        text: "＋"
+                        font.pixelSize: 8
+                        font.bold: true
+                        color: "#005257"
+                        opacity: controlsRow.hovered ? 1.0 : 0.0
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                    }
                     MouseArea {
                         anchors.fill: parent
                         onClicked: toggleMaximize()
@@ -73,10 +98,29 @@ Rectangle {
                 // Close
                 Rectangle {
                     width: 12; height: 12; radius: 6; color: "#FF5E62"
+                    Text {
+                        anchors.centerIn: parent
+                        text: "✕"
+                        font.pixelSize: 7
+                        font.bold: true
+                        color: "#570003"
+                        opacity: controlsRow.hovered ? 1.0 : 0.0
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                    }
                     MouseArea {
                         anchors.fill: parent
                         onClicked: windowRoot.destroy()
                     }
+                }
+
+                // Overlay to track hover state across controls group
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onEntered: controlsRow.hovered = true
+                    onExited: controlsRow.hovered = false
+                    propagateComposedEvents: true
+                    onPressed: mouse.accepted = false
                 }
             }
         }
