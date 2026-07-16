@@ -110,6 +110,10 @@ apt-get install -y --no-install-recommends \
   weston \
   xwayland \
   sddm \
+  qml-module-qtgraphicaleffects \
+  qml-module-qtquick-controls2 \
+  qml-module-qtquick-layouts \
+  qml-module-qtquick-window2 \
   dbus-user-session \
   policykit-1 \
   plymouth \
@@ -168,6 +172,9 @@ if [ -f /etc/initramfs-tools/initramfs.conf ]; then
   sed -i 's/^#\?[[:space:]]*COMPRESS=.*/COMPRESS=zstd/g' /etc/initramfs-tools/initramfs.conf || true
 fi
 
+# Add lightweight virtual GPU drivers for early VM modesetting
+echo -e "virtio_gpu\nvboxvideo\nvmwgfx" >> /etc/initramfs-tools/modules
+
 # Mask blocking early services to speed up boot sequence (Phase 4)
 systemctl mask keyboard-setup.service || true
 systemctl mask console-setup.service || true
@@ -180,6 +187,15 @@ systemctl mask systemd-networkd-wait-online.service || true
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
   plymouth-set-default-theme -R spinner || true
 fi
+
+# Set show delay to 0 to make the boot logo appear instantly (Step 2)
+mkdir -p /etc/plymouth
+cat <<'LEOF' > /etc/plymouth/plymouthd.conf
+[Daemon]
+Theme=spinner
+ShowDelay=0
+DeviceTimeout=5
+LEOF
 
 # Overwrite Plymouth spinner theme configurations with explicit Watermark logo mappings
 PLYMOUTH_SPINNER_CONF="/usr/share/plymouth/themes/spinner/spinner.plymouth"
