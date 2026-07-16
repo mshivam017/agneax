@@ -81,7 +81,9 @@ apt-get install -y --no-install-recommends \
   linux-image-amd64 \
   live-boot \
   systemd-sysv \
-  dbus
+  dbus \
+  zstd \
+  haveged
 
 # Install hardware drivers and firmware for GPU, WiFi, and Bluetooth (Intel, AMD, NVIDIA, VMs)
 apt-get install -y --no-install-recommends \
@@ -164,13 +166,15 @@ systemctl set-default graphical.target
 
 # Configure initramfs tools to use zstd compression for faster boot (Step 1)
 if [ -f /etc/initramfs-tools/initramfs.conf ]; then
-  sed -i 's/COMPRESS=gzip/COMPRESS=zstd/g' /etc/initramfs-tools/initramfs.conf
+  sed -i 's/^#\?[[:space:]]*COMPRESS=.*/COMPRESS=zstd/g' /etc/initramfs-tools/initramfs.conf || true
 fi
 
 # Mask blocking early services to speed up boot sequence (Phase 4)
 systemctl mask keyboard-setup.service || true
 systemctl mask console-setup.service || true
 systemctl mask apt-daily.timer apt-daily-upgrade.timer || true
+systemctl mask NetworkManager-wait-online.service || true
+systemctl mask systemd-networkd-wait-online.service || true
 
 # Add early graphics drivers to initramfs configuration (Phase 1)
 echo -e "i915\namdgpu\nnouveau\nvboxvideo\nvmwgfx\nvirtio_gpu" >> /etc/initramfs-tools/modules
@@ -210,7 +214,7 @@ fi
 mkdir -p /etc/systemd/system/lightdm.service.d
 cat <<'LEOF' > /etc/systemd/system/lightdm.service.d/override.conf
 [Service]
-ExecStartPre=/bin/sh -c 'until [ -e /dev/dri/card0 ] || [ -e /dev/fb0 ]; do sleep 0.1; done'
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 20); do [ -e /dev/dri/card0 ] || [ -e /dev/fb0 ] && exit 0; sleep 0.1; done; exit 0'
 Restart=always
 RestartSec=2
 LEOF
