@@ -34,12 +34,12 @@ The output binary will be located at `packages/agneax-core/target/release/agneax
 ### Step 2: Compile the C++ Compositor Layout Helper
 Configure CMake and make the shared library:
 ```bash
-mkdir -p desktop/cpp_src/build
-cd desktop/cpp_src/build
+mkdir -p packages/agneax_shell/cpp_src/build
+cd packages/agneax_shell/cpp_src/build
 cmake ..
 make
 ```
-The output shared library will be located at `desktop/cpp_src/build/libcompositor_helper.so`.
+The output shared library will be located at `packages/agneax_shell/cpp_src/build/libcompositor_helper.so`.
 
 ### Step 3: Compile and Package Custom Plymouth
 Run the packaging script to build the customized C Plymouth package:

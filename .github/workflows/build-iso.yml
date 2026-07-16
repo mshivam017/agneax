@@ -80,8 +80,8 @@ jobs:
 
       - name: Compile C++ Window Helper
         run: |
-          mkdir -p desktop/cpp_src/build
-          cd desktop/cpp_src/build
+          mkdir -p packages/agneax_shell/cpp_src/build
+          cd packages/agneax_shell/cpp_src/build
           cmake ..
           make
 

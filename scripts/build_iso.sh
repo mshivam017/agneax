@@ -407,8 +407,8 @@ fi
 
 # Copy built C++ helpers
 mkdir -p "$ROOTFS/usr/lib"
-if [ -f "desktop/cpp_src/build/libcompositor_helper.so" ]; then
-  cp "desktop/cpp_src/build/libcompositor_helper.so" "$ROOTFS/usr/lib/libcompositor_helper.so"
+if [ -f "packages/agneax_shell/cpp_src/build/libcompositor_helper.so" ]; then
+  cp "packages/agneax_shell/cpp_src/build/libcompositor_helper.so" "$ROOTFS/usr/lib/libcompositor_helper.so"
   echo "C++ Layout Helper installed successfully."
 fi
 

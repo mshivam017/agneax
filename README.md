@@ -80,7 +80,7 @@ sudo ./scripts/install_deps.sh
 cd packages/agneax-core && cargo build --release && cd ../..
 
 # 3. Build C++ helper
-mkdir -p desktop/cpp_src/build && cd desktop/cpp_src/build && cmake .. && make && cd ../../..
+mkdir -p packages/agneax_shell/cpp_src/build && cd packages/agneax_shell/cpp_src/build && cmake .. && make && cd ../../..
 
 # 4. Generate bootable ISO
 sudo ./scripts/build_iso.sh
