@@ -338,6 +338,7 @@ exit_code=1
 
 if [ -n "${DISPLAY:-}" ]; then
   echo "X11 DISPLAY detected ($DISPLAY). Running desktop shell natively on X11..."
+  export QT_QPA_PLATFORM=xcb
   if command -v openbox >/dev/null 2>&1; then
     echo "Starting openbox window manager..."
     openbox &
@@ -380,6 +381,7 @@ else
   # Fallback to local X server if compositor failed completely
   if [ $exit_code -ne 0 ]; then
     echo "Weston failed completely. Starting fallback local Xorg server..."
+    export QT_QPA_PLATFORM=xcb
     if command -v startx >/dev/null 2>&1; then
       startx "$RUN_SCRIPT" -- :0 vt7
       exit_code=$?
@@ -620,8 +622,14 @@ cp -R configs/* "$ROOTFS/" || true
 cat <<'EOF' > "$ROOTFS/opt/agneax/desktop/run.sh"
 #!/usr/bin/env bash
 # Startup script for Agneax Desktop environment
-export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
-export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+
+# Dynamic platform auto-detection (Component 1)
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
+    export QT_WAYLAND_SHELL_INTEGRATION=kiosk-shell
+else
+    export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+fi
 
 # Display scaling & HiDPI (Component 2)
 export QT_AUTO_SCREEN_SCALE_FACTOR=1

@@ -1,0 +1,393 @@
+AGNEAX OS LOGIN TO DESKTOP REDIRECT ANALYSIS
+Date: 2026-07-16
+Repository: D:\myprojects\Github
+Issue: Login ke baad Agneax desktop screen nahi aa rahi / system tty1 par ruk raha hai.
+
+SHORT ANSWER
+
+Problem OS kernel me nahi hai. Debian live system boot ho raha hai.
+Problem graphical startup chain me hai:
+
+systemd -> SDDM/Login Manager -> Agneax session -> /usr/bin/agneax-session-start -> display backend -> /opt/agneax/desktop/run.sh -> python3 main.py -> QML desktop
+
+Abhi repo me display/login configuration mixed ho gayi hai:
+- build_iso.sh SDDM use kar raha hai.
+- configs folder me abhi bhi LightDM config bachi hui hai.
+- build_iso.sh ek robust /usr/bin/agneax-session-start generate karta hai.
+- Lekin baad me cp -R configs/* "$ROOTFS/" chalne par configs/usr/bin/agneax-session-start us generated script ko overwrite kar sakta hai.
+- Final ISO me kaunsa session script ja raha hai, ye mismatch desktop launch fail kara sakta hai.
+
+Sabse bada conceptual point:
+TTY login ke baad desktop automatic start nahi hota.
+TTY login normal Linux console login hai. Agar aap tty1 par username/password dalte ho, shell milega, desktop redirect nahi hoga jab tak .profile, startx, SDDM, ya koi autostart script configured na ho.
+
+Desktop redirect graphical login manager SDDM se hota hai, tty login se nahi.
+
+CURRENT REPO STATE
+
+Desktop files:
+- Old desktop/ folder ab root me nahi hai.
+- Desktop shell ab packages/agneax_shell/ me hai.
+- build_iso.sh packages/agneax_shell/* ko /opt/agneax/desktop/ me copy karta hai.
+
+Relevant files:
+- scripts/build_iso.sh
+- configs/usr/bin/agneax-session-start
+- configs/usr/share/xsessions/agneax.desktop
+- configs/etc/lightdm/lightdm.conf
+- configs/etc/lightdm/lightdm.conf.d/agneax.conf
+- packages/agneax_shell/main.py
+- packages/agneax_shell/qml/DesktopShell.qml
+- packages/agneax-sddm-theme/Main.qml
+- packages/agneax-sddm-theme/theme.conf
+
+BOOT / LOGIN FLOW IN CURRENT BUILD SCRIPT
+
+1. Base Debian system is created with debootstrap.
+2. build_iso.sh installs SDDM:
+   - sddm
+   - xinit
+   - openbox
+   - weston
+   - xwayland
+   - PySide6
+   - Qt/QML dependencies
+3. User agneax is created.
+4. SDDM is enabled:
+   - systemctl enable sddm
+   - systemctl set-default graphical.target
+5. SDDM autologin is configured:
+   - User=agneax
+   - Session=agneax
+6. X session file is created:
+   - /usr/share/xsessions/agneax.desktop
+   - Exec=/usr/bin/agneax-session-start
+7. Desktop code is copied:
+   - packages/agneax_shell/* -> /opt/agneax/desktop/
+8. Later configs are copied:
+   - cp -R configs/* "$ROOTFS/" || true
+
+The final copy step is risky because configs/usr/bin/agneax-session-start can overwrite the more complete script generated earlier in build_iso.sh.
+
+WHY LOGIN KE BAAD DESKTOP NAHI AA RAHA
+
+There are several likely causes.
+
+CAUSE 1: TTY login is not supposed to redirect to desktop
+
+If screen shows:
+
+Debian GNU/Linux 12 agneax-os tty1
+agneax-os login:
+
+then you are not inside graphical login manager. You are on Linux console.
+Typing agneax / agneax here will only open a shell.
+It will not automatically launch Agneax Desktop.
+
+So if your expectation is "TTY login ke baad desktop open ho", that is not currently configured.
+
+To make TTY login start desktop, you need one of these:
+- SDDM must start instead of tty.
+- Or .bash_profile must call startx.
+- Or getty autologin + startx service must be configured.
+
+CAUSE 2: SDDM service may not be starting
+
+If SDDM does not start, system falls back to tty.
+
+Possible reasons:
+- graphical.target not actually reached in old ISO.
+- SDDM service crashes.
+- SDDM theme crashes.
+- Xorg missing or failing.
+- VirtualBox graphics not ready when SDDM starts.
+- /dev/dri/card0 or framebuffer not ready.
+
+Commands to check inside ISO after tty login:
+
+systemctl get-default
+systemctl status sddm --no-pager
+journalctl -b -u sddm --no-pager
+journalctl -b -p err --no-pager
+
+Expected:
+- get-default should show graphical.target
+- sddm should be active/running
+
+If sddm is failed, desktop redirect cannot happen.
+
+CAUSE 3: SDDM session starts but /usr/bin/agneax-session-start fails
+
+SDDM session file:
+
+/usr/share/xsessions/agneax.desktop
+
+contains:
+
+Exec=/usr/bin/agneax-session-start
+
+If this script exits quickly, SDDM returns to login screen or tty.
+
+Current overlay script in configs/usr/bin/agneax-session-start:
+- tries Weston x11-backend first
+- tries Weston x11-backend with pixman
+- then falls back to openbox + /opt/agneax/desktop/run.sh
+
+Problem:
+- This script is not the same as the robust script generated in build_iso.sh.
+- Because configs are copied after generation, overlay script can win.
+- This makes debugging confusing: build script says one thing, final ISO may contain another.
+
+Commands to check inside ISO:
+
+cat /usr/bin/agneax-session-start
+ls -l /usr/bin/agneax-session-start
+cat /tmp/weston-start.log
+cat /tmp/weston.log
+cat /tmp/agneax-desktop.log
+cat ~/.cache/agneax/session.log
+
+CAUSE 4: X11 session + QT_QPA_PLATFORM mismatch
+
+Current SDDM session is under:
+
+/usr/share/xsessions/agneax.desktop
+
+That means SDDM starts it as an X11 session.
+
+But /opt/agneax/desktop/run.sh currently defaults:
+
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
+
+If the session is X11 and no Weston/Wayland socket is active, PySide6 tries Wayland and can fail.
+
+For an X11 SDDM session, the safe setting is:
+
+export QT_QPA_PLATFORM=xcb
+
+For a Weston/Wayland session, the safe setting is:
+
+export QT_QPA_PLATFORM=wayland
+
+Right now the project mixes both approaches.
+
+Recommended:
+- For VirtualBox alpha ISO, use X11 + Openbox + PySide6 with QT_QPA_PLATFORM=xcb.
+- Keep Weston/Wayland as optional later session after X11 path is stable.
+
+CAUSE 5: Weston launch method may not start the desktop process reliably
+
+The overlay session script uses:
+
+weston --backend=x11-backend.so ... -- /opt/agneax/desktop/run.sh
+
+Depending on Weston version/options, this may not reliably launch the client app.
+The safer approach is:
+- start Weston in background
+- wait for WAYLAND_DISPLAY
+- export WAYLAND_DISPLAY
+- then run /opt/agneax/desktop/run.sh
+
+Or simpler:
+- do not start Weston inside X11
+- use Openbox and run PySide6 directly with xcb.
+
+CAUSE 6: SDDM theme can fail
+
+The SDDM theme uses:
+
+import QtGraphicalEffects 1.0
+import QtQuick.Controls 2.4
+import QtQuick.Layouts 1.11
+
+build_iso.sh installs some qml modules, but if any SDDM QML dependency is missing, SDDM greeter can fail.
+
+Commands to check:
+
+journalctl -b -u sddm --no-pager
+ls /usr/share/sddm/themes/agneax/
+cat /etc/sddm.conf
+
+CAUSE 7: old ISO may not contain current fixes
+
+If you are testing an ISO built before these config changes, it will still show old behavior.
+After changing scripts/configs, you must rebuild ISO.
+
+SHOULD LOGIN SYSTEM BE REMOVED?
+
+Do not remove login system permanently.
+
+For a proper OS:
+- A display manager/login system is needed.
+- Users, sessions, lock screen, permissions, and security depend on it.
+
+But for current alpha ISO:
+- Yes, login should be bypassed by default.
+- Use automatic graphical login directly into Agneax Desktop.
+- Keep Debug Console as a separate GRUB entry for troubleshooting.
+
+Best approach:
+- Keep SDDM installed.
+- Configure SDDM autologin to agneax user.
+- Make default boot go directly to desktop.
+- Keep tty/debug console only for recovery.
+
+If SDDM keeps failing:
+- Temporarily bypass SDDM and use getty autologin + startx/openbox.
+- That is acceptable for alpha testing, but not final production design.
+
+RECOMMENDED FIX PLAN
+
+Fix plan should be simple and stable. Do not mix SDDM, LightDM, X11, and Wayland at the same time.
+
+STEP 1: Choose one display manager
+
+Use SDDM only.
+Remove or stop copying LightDM configs:
+- configs/etc/lightdm/lightdm.conf
+- configs/etc/lightdm/lightdm.conf.d/agneax.conf
+
+These files are stale now because build_iso.sh uses SDDM.
+
+STEP 2: Choose one default session for alpha
+
+Use X11 session for VirtualBox alpha:
+- SDDM -> xsessions/agneax.desktop -> /usr/bin/agneax-session-start
+- session script starts openbox
+- set QT_QPA_PLATFORM=xcb
+- run /opt/agneax/desktop/run.sh
+
+Reason:
+- X11 is easier in VirtualBox.
+- PySide6 desktop will show faster.
+- Weston/Wayland can be added later.
+
+STEP 3: Make /usr/bin/agneax-session-start very simple
+
+Recommended alpha script:
+
+#!/usr/bin/env bash
+set -u
+
+LOG_FILE="/tmp/agneax-session.log"
+echo "=== Agneax X11 Session: $(date) ===" > "$LOG_FILE"
+exec >>"$LOG_FILE" 2>&1
+
+export QT_QPA_PLATFORM=xcb
+export QT_X11_NO_MITSHM=1
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+
+openbox &
+cd /opt/agneax/desktop
+exec python3 main.py
+
+This removes Weston from the first boot path.
+
+STEP 4: Make run.sh respect session mode
+
+For X11 alpha:
+
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+
+Not:
+
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
+
+STEP 5: Keep Wayland as separate optional session
+
+Later create:
+
+/usr/share/wayland-sessions/agneax-wayland.desktop
+
+That can use Weston/Wayland when stable.
+
+STEP 6: Do not let configs overwrite generated scripts accidentally
+
+Either:
+- Generate final session scripts only once after cp -R configs.
+
+Or:
+- Keep configs/usr/bin/agneax-session-start exactly same as build_iso.sh version.
+
+Right now this mismatch is a major source of confusion.
+
+STEP 7: Add logs and debug commands
+
+Always write logs:
+- /tmp/agneax-session.log
+- /tmp/agneax-desktop.log
+- ~/.cache/agneax/session.log
+- journalctl -b -u sddm
+
+WHAT TO CHECK IN CURRENT ISO
+
+Login at tty:
+
+username: agneax
+password: agneax
+
+Then run:
+
+systemctl get-default
+systemctl status sddm --no-pager
+journalctl -b -u sddm --no-pager
+journalctl -b -p err --no-pager
+cat /etc/sddm.conf
+ls -l /usr/share/xsessions/
+cat /usr/share/xsessions/agneax.desktop
+cat /usr/bin/agneax-session-start
+ls -l /opt/agneax/desktop/
+cat /tmp/agneax-session.log
+cat /tmp/agneax-desktop.log
+cat ~/.cache/agneax/session.log
+
+Manual desktop test from tty:
+
+export QT_QPA_PLATFORM=xcb
+startx /opt/agneax/desktop/run.sh
+
+If that works, SDDM/session config is the problem.
+
+Manual PySide test:
+
+cd /opt/agneax/desktop
+QT_QPA_PLATFORM=xcb python3 main.py
+
+If this fails, PySide/QML app is the problem.
+
+IF YOU WANT TO REMOVE LOGIN TEMPORARILY
+
+For alpha testing only, you can bypass SDDM and login by creating getty autologin + startx.
+
+Concept:
+- tty1 auto-login as agneax.
+- ~/.profile auto-runs startx once.
+- X11 starts Openbox.
+- Agneax PySide desktop starts with xcb.
+
+This is easier for testing, but less proper than SDDM.
+
+Recommended only if:
+- SDDM continues failing.
+- You just want ISO to land on desktop quickly for demos/testing.
+
+FINAL RECOMMENDATION
+
+Do not remove login system permanently.
+For now, simplify it.
+
+Best next fix:
+1. Use SDDM only.
+2. Remove stale LightDM configs.
+3. Use X11/Openbox/xcb as default alpha session.
+4. Do not start Weston inside the default login path.
+5. Keep Wayland/Weston as a separate experimental session.
+6. Ensure configs do not overwrite generated session scripts.
+7. Rebuild ISO and test again in VirtualBox.
+
+Most likely reason desktop is not appearing:
+- You are either at tty login, which does not auto-start desktop,
+- or SDDM session is failing because final /usr/bin/agneax-session-start and run.sh mix X11/Wayland/Weston in an unstable way.
+

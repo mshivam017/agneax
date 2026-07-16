@@ -1,6 +1,0 @@
-[Desktop Entry]
-Name=Agneax Desktop
-Comment=Fast, beautiful and secure QML desktop shell
-Exec=/usr/bin/agneax-session-start
-Type=Application
-DesktopNames=Agneax
