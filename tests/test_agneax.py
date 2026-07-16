@@ -26,7 +26,7 @@ except ImportError:
 # Append repository root path to system paths for testing
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from desktop.main import SystemBridge
+from packages.agneax_shell.main import SystemBridge
 from store.main import StoreBridge
 from installer.main import InstallerBridge
 import importlib
