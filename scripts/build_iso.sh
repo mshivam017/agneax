@@ -165,6 +165,7 @@ echo "agneax ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Enable system services
 systemctl enable sddm
+ln -sf /lib/systemd/system/sddm.service /etc/systemd/system/display-manager.service
 systemctl enable NetworkManager
 systemctl enable ufw
 systemctl set-default graphical.target
