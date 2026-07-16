@@ -315,11 +315,11 @@ RUN_SCRIPT="/opt/agneax/desktop/run.sh"
 if [ ! -x "$RUN_SCRIPT" ]; then
   echo "Error: Run script $RUN_SCRIPT not found or not executable. Trying python main.py fallback."
   if [ -f "/opt/agneax/desktop/main.py" ]; then
-    cat <<'EOF' > /tmp/agneax-fallback-run.sh
+    cat <<'INNER_EOF' > /tmp/agneax-fallback-run.sh
 #!/usr/bin/env bash
 cd /opt/agneax/desktop
 python3 main.py
-EOF
+INNER_EOF
     chmod +x /tmp/agneax-fallback-run.sh
     RUN_SCRIPT="/tmp/agneax-fallback-run.sh"
   else
