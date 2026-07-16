@@ -489,10 +489,14 @@ print("Plymouth spinner frames colorized successfully.")
 ' || true
 fi
 
-# Integrate custom branded SDDM sugar-candy theme
+# Integrate custom branded SDDM sugar-candy theme (pruned to avoid ISO bloat)
 echo "Integrating custom branded SDDM sugar-candy theme..."
 mkdir -p "$ROOTFS/usr/share/sddm/themes/sugar-candy"
-cp -r sddm-sugar-candy-src/* "$ROOTFS/usr/share/sddm/themes/sugar-candy/"
+cp -r sddm-sugar-candy-src/Components "$ROOTFS/usr/share/sddm/themes/sugar-candy/"
+cp -r sddm-sugar-candy-src/Assets "$ROOTFS/usr/share/sddm/themes/sugar-candy/"
+mkdir -p "$ROOTFS/usr/share/sddm/themes/sugar-candy/Backgrounds"
+cp sddm-sugar-candy-src/Main.qml "$ROOTFS/usr/share/sddm/themes/sugar-candy/"
+cp sddm-sugar-candy-src/metadata.desktop "$ROOTFS/usr/share/sddm/themes/sugar-candy/"
 
 # Copy custom Agneax wallpaper and branding configs to SDDM theme
 if [ -f "build/wallpaper.png" ]; then
