@@ -109,8 +109,7 @@ apt-get install -y --no-install-recommends \
 apt-get install -y --no-install-recommends \
   weston \
   xwayland \
-  lightdm \
-  lightdm-gtk-greeter \
+  sddm \
   dbus-user-session \
   policykit-1 \
   plymouth \
@@ -159,7 +158,7 @@ usermod -aG sudo,video,audio,cdrom,autologin agneax
 echo "agneax ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Enable system services
-systemctl enable lightdm
+systemctl enable sddm
 systemctl enable NetworkManager
 systemctl enable ufw
 systemctl set-default graphical.target
@@ -208,9 +207,9 @@ if [ -f "$PLYMOUTH_SPINNER_SCRIPT" ]; then
   sed -i 's/status_entry.SetColor[[[:space:]]*[^)]*)/status_entry.SetColor(0.62, 0.68, 0.75)/g' "$PLYMOUTH_SPINNER_SCRIPT"
 fi
 
-# Add LightDM hardware wait delay override (Phase 4)
-mkdir -p /etc/systemd/system/lightdm.service.d
-cat <<'LEOF' > /etc/systemd/system/lightdm.service.d/override.conf
+# Add SDDM hardware wait delay override (Phase 4)
+mkdir -p /etc/systemd/system/sddm.service.d
+cat <<'LEOF' > /etc/systemd/system/sddm.service.d/override.conf
 [Service]
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 20); do [ -e /dev/dri/card0 ] || [ -e /dev/fb0 ] && exit 0; sleep 0.1; done; exit 0'
 Restart=always
@@ -239,15 +238,14 @@ LEOF
 
 systemctl enable agneax-core
 
-# Set up autostart for weston and custom Agneax shell
-mkdir -p /etc/lightdm/lightdm.conf.d
-cat <<'LEOF' > /etc/lightdm/lightdm.conf.d/agneax.conf
-[Seat:*]
-autologin-user=agneax
-autologin-user-timeout=0
-user-session=agneax
-autologin-session=agneax
-greeter-session=lightdm-gtk-greeter
+# Set up autostart and theme for SDDM
+cat <<'LEOF' > /etc/sddm.conf
+[Theme]
+Current=sugar-candy
+
+[Autologin]
+User=agneax
+Session=agneax
 LEOF
 
 mkdir -p /usr/share/xsessions
@@ -465,30 +463,42 @@ if [ -f "build/logo.png" ]; then
   mkdir -p "$ROOTFS/usr/share/plymouth"
   cp "build/logo.png" "$ROOTFS/usr/share/plymouth/debian-logo.png"
   
-  # Colorize Plymouth spinner frames to Agneax Cyan (#00F2FE)
+  # Colorize Plymouth spinner frames to Agneax Cyan (#00F2FE) using Pillow (Step 2)
   echo "Colorizing Plymouth spinner frames to match Agneax branding..."
   python3 -c '
-from PySide6.QtGui import QImage, QColor
+from PIL import Image
 import glob
 import os
 
 spinner_dir = "'"$ROOTFS"'/usr/share/plymouth/themes/spinner"
 for filepath in glob.glob(os.path.join(spinner_dir, "spinner-*.png")):
-    img = QImage(filepath)
-    if img.isNull():
-        continue
-    for y in range(img.height()):
-        for x in range(img.width()):
-            c = img.pixelColor(x, y)
-            if c.alpha() > 0:
-                c.setRed(0)
-                c.setGreen(242)
-                c.setBlue(254)
-                img.setPixelColor(x, y, c)
-    img.save(filepath)
+    try:
+        img = Image.open(filepath).convert("RGBA")
+        datas = img.getdata()
+        new_data = []
+        for item in datas:
+            if item[3] > 0:
+                new_data.append((0, 242, 254, item[3]))
+            else:
+                new_data.append(item)
+        img.putdata(new_data)
+        img.save(filepath)
+    except Exception as e:
+        print(f"Error colorizing {filepath}: {e}")
 print("Plymouth spinner frames colorized successfully.")
 ' || true
 fi
+
+# Integrate custom branded SDDM sugar-candy theme
+echo "Integrating custom branded SDDM sugar-candy theme..."
+mkdir -p "$ROOTFS/usr/share/sddm/themes/sugar-candy"
+cp -r sddm-sugar-candy-src/* "$ROOTFS/usr/share/sddm/themes/sugar-candy/"
+
+# Copy custom Agneax wallpaper and branding configs to SDDM theme
+if [ -f "build/wallpaper.png" ]; then
+  cp "build/wallpaper.png" "$ROOTFS/usr/share/sddm/themes/sugar-candy/Backgrounds/agneax-wallpaper.png"
+fi
+cp branding/sddm-theme.conf "$ROOTFS/usr/share/sddm/themes/sugar-candy/theme.conf"
 
 # Copy configs (lightdm, network, rules)
 cp -R configs/* "$ROOTFS/" || true
