@@ -144,6 +144,8 @@ apt-get install -y --no-install-recommends \
   git \
   curl \
   xinit \
+  xserver-xorg \
+  xauth \
   openbox
 
 # Install PySide6 via pip inside the chroot
