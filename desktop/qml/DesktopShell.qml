@@ -126,6 +126,7 @@ ApplicationWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottomMargin: root.taskbarLayout == "Panel" ? 12 : 20
         visible: root.startMenuOpen && !root.isTabletMode
+        appsList: root.appsList
     }
 
     // Full-Screen Apps Overview Grid Drawer (Convergence Mode)
@@ -133,6 +134,12 @@ ApplicationWindow {
         id: appsOverview
         anchors.fill: parent
         visible: root.startMenuOpen && root.isTabletMode
+        isDarkMode: root.isDarkMode
+        textPrimaryColor: root.textPrimaryColor
+        textSecondaryColor: root.textSecondaryColor
+        accentColor: root.accentColor
+        appsList: root.appsList
+        onCloseRequested: root.startMenuOpen = false
     }
 
     // Glassmorphic Quick Settings Overlay
@@ -198,6 +205,7 @@ ApplicationWindow {
         iconText: "⚙️"
         x: 150
         y: 120
+        visible: !isMinimized && root.activeWorkspace === workspaceIndex
     }
 
     // Widgets Dashboard (Phase 5)

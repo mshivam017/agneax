@@ -4,11 +4,18 @@ import QtQuick.Layouts 1.15
 
 Rectangle {
     id: overviewRoot
-    color: root.isDarkMode ? "rgba(10, 12, 18, 0.92)" : "rgba(240, 244, 248, 0.95)"
+    color: isDarkMode ? "rgba(10, 12, 18, 0.92)" : "rgba(240, 244, 248, 0.95)"
     z: 100
 
+    property bool isDarkMode: false
+    property string textPrimaryColor: "#FFFFFF"
+    property string textSecondaryColor: "#A0AEC0"
+    property string accentColor: "#00F2FE"
+    property var appsList: []
     property string searchFilter: ""
     property string activeCategory: "All"
+
+    signal closeRequested()
 
     // Background blur fallback styling
     Rectangle {
@@ -31,7 +38,7 @@ Rectangle {
                 font.family: "Segoe UI, Inter"
                 font.bold: true
                 font.pixelSize: 28
-                color: root.textPrimaryColor
+                color: overviewRoot.textPrimaryColor
             }
             Item { Layout.fillWidth: true }
             Button {
@@ -41,9 +48,9 @@ Rectangle {
                 contentItem: Text {
                     text: parent.text
                     font: parent.font
-                    color: root.textPrimaryColor
+                    color: overviewRoot.textPrimaryColor
                 }
-                onClicked: root.startMenuOpen = false
+                onClicked: overviewRoot.closeRequested()
             }
         }
 
@@ -65,14 +72,14 @@ Rectangle {
                 Text {
                     text: "🔍"
                     font.pixelSize: 18
-                    color: root.textSecondaryColor
+                    color: overviewRoot.textSecondaryColor
                 }
 
                 TextField {
                     id: searchField
                     placeholderText: "Search apps..."
-                    placeholderTextColor: root.textSecondaryColor
-                    color: root.textPrimaryColor
+                    placeholderTextColor: overviewRoot.textSecondaryColor
+                    color: overviewRoot.textPrimaryColor
                     background: null
                     Layout.fillWidth: true
                     font.family: "Segoe UI, Inter"
@@ -98,13 +105,13 @@ Rectangle {
                     
                     background: Rectangle {
                         radius: 8
-                        color: overviewRoot.activeCategory === modelData ? root.accentColor : "transparent"
+                        color: overviewRoot.activeCategory === modelData ? overviewRoot.accentColor : "transparent"
                     }
 
                     contentItem: Text {
                         text: parent.text
                         font: parent.font
-                        color: overviewRoot.activeCategory === modelData ? "#0F1219" : root.textPrimaryColor
+                        color: overviewRoot.activeCategory === modelData ? "#0F1219" : overviewRoot.textPrimaryColor
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -126,15 +133,11 @@ Rectangle {
                 padding: 10
 
                 Repeater {
-                    model: root.appsList
+                    model: overviewRoot.appsList
                     delegate: Item {
-                        width: 120
-                        height: 120
-                        visible: {
-                            var matchesSearch = modelData.name.toLowerCase().includes(overviewRoot.searchFilter);
-                            var matchesCategory = (overviewRoot.activeCategory === "All" || modelData.category === overviewRoot.activeCategory);
-                            return matchesSearch && matchesCategory;
-                        }
+                        visible: modelData.name.toLowerCase().includes(overviewRoot.searchFilter) && (overviewRoot.activeCategory === "All" || modelData.category === overviewRoot.activeCategory)
+                        width: visible ? 120 : 0
+                        height: visible ? 120 : 0
 
                         ColumnLayout {
                             anchors.fill: parent
@@ -148,7 +151,7 @@ Rectangle {
                                 height: 72
                                 radius: 16
                                 color: appMouseArea.hovered ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.05)"
-                                border.color: appMouseArea.hovered ? root.accentColor : "transparent"
+                                border.color: appMouseArea.hovered ? overviewRoot.accentColor : "transparent"
                                 border.width: 1
 
                                 Text {
@@ -166,7 +169,7 @@ Rectangle {
                                 font.family: "Segoe UI, Inter"
                                 font.pixelSize: 12
                                 font.bold: true
-                                color: root.textPrimaryColor
+                                color: overviewRoot.textPrimaryColor
                                 elide: Text.ElideRight
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -178,7 +181,7 @@ Rectangle {
                             hoverEnabled: true
                             onClicked: {
                                 systemBridge.launchApp(modelData.id);
-                                root.startMenuOpen = false;
+                                overviewRoot.closeRequested();
                             }
                         }
                     }

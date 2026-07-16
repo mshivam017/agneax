@@ -16,10 +16,10 @@ Rectangle {
     property string iconText: "📄"
     property bool isMaximized: false
     property bool isMinimized: false
-    property int workspaceIndex: root.activeWorkspace
+    property int workspaceIndex: 1
     property var previousGeometry: ({"x": 100, "y": 100, "width": 640, "height": 400})
 
-    visible: !isMinimized && root.activeWorkspace === workspaceIndex
+    visible: !isMinimized
 
     // Snapping indicator targets
     signal windowSnapped(int direction) // 1=Left, 2=Right, 7=Fullscreen

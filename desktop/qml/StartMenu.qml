@@ -22,7 +22,7 @@ Rectangle {
     }
 
     // List of available system applications
-    property var appsList: root.appsList
+    property var appsList: []
 
     ColumnLayout {
         anchors.fill: parent

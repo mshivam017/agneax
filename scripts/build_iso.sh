@@ -176,8 +176,6 @@ systemctl mask apt-daily.timer apt-daily-upgrade.timer || true
 systemctl mask NetworkManager-wait-online.service || true
 systemctl mask systemd-networkd-wait-online.service || true
 
-# Add early graphics drivers to initramfs configuration (Phase 1)
-echo -e "i915\namdgpu\nnouveau\nvboxvideo\nvmwgfx\nvirtio_gpu" >> /etc/initramfs-tools/modules
 
 # Configure Plymouth default bootloader splash theme (Step 1)
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
