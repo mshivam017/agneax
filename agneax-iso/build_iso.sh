@@ -146,6 +146,7 @@ apt-get install -y --no-install-recommends \
   xinit \
   xserver-xorg \
   xauth \
+  accountsservice \
   openbox
 
 # Install PySide6 via pip inside the chroot
@@ -161,6 +162,7 @@ groupadd -r autologin || true
 useradd -m -s /bin/bash agneax
 echo "agneax:agneax" | chpasswd
 usermod -aG sudo,video,input,render,autologin agneax || true
+usermod -aG video,render sddm || true
 echo "agneax ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Enable system services
