@@ -26,11 +26,17 @@ except ImportError:
 # Append repository root path to system paths for testing
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from packages.agneax_shell.main import SystemBridge
-from store.main import StoreBridge
-from installer.main import InstallerBridge
 import importlib
-cc_main = importlib.import_module("control-center.main")
+desktop_main = importlib.import_module("agneax-desktop.main")
+SystemBridge = desktop_main.SystemBridge
+
+store_main = importlib.import_module("agneax-store.main")
+StoreBridge = store_main.StoreBridge
+
+installer_main = importlib.import_module("agneax-installer.main")
+InstallerBridge = installer_main.InstallerBridge
+
+cc_main = importlib.import_module("agneax-settings.main")
 SettingsBridge = cc_main.SettingsBridge
 
 class TestSystemBridge(unittest.TestCase):

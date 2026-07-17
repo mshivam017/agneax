@@ -26,8 +26,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            packages/agneax-core/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/agneax-core/Cargo.toml') }}
+            agneax-services/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('agneax-services/Cargo.toml') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
@@ -66,12 +66,12 @@ jobs:
 
       - name: Build Rust System Daemon (agneax-core)
         run: |
-          cd packages/agneax-core
+          cd agneax-services
           cargo build --release
 
       - name: Run Rust Daemon Unit Tests
         run: |
-          cd packages/agneax-core
+          cd agneax-services
           cargo test
 
       - name: Run Python Application Unit Tests
@@ -80,20 +80,20 @@ jobs:
 
       - name: Compile C++ Window Helper
         run: |
-          mkdir -p packages/agneax_shell/cpp_src/build
-          cd packages/agneax_shell/cpp_src/build
+          mkdir -p agneax-shell/cpp_src/build
+          cd agneax-shell/cpp_src/build
           cmake ..
           make
 
       - name: Compile and Package Custom Plymouth
         run: |
-          chmod +x scripts/package_plymouth.sh
-          ./scripts/package_plymouth.sh
+          chmod +x agneax-iso/package_plymouth.sh
+          ./agneax-iso/package_plymouth.sh
 
       - name: Run ISO Builder Script
         run: |
-          chmod +x scripts/build_iso.sh
-          sudo ./scripts/build_iso.sh
+          chmod +x agneax-iso/build_iso.sh
+          sudo ./agneax-iso/build_iso.sh
           sudo chown -R $USER:$USER build
 
       - name: Verify ISO Boot in QEMU (Headless)
